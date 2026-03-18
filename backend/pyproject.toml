@@ -1,0 +1,28 @@
+[project]
+name = "runningbpm-backend"
+version = "1.0.0"
+description = "RunningBPM - 跑步音乐制作工具后端"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "python-multipart>=0.0.12",
+    "pydub>=0.25.1",
+    "librosa>=0.10.2",
+    "numpy>=2.1.0",
+    "scipy>=1.14.0",
+    "soundfile>=0.12.1",
+    "aiofiles>=24.1.0",
+    "python-jose[cryptography]>=3.3.0",
+    "pydantic>=2.9.0",
+    "websockets>=14.0",
+    "python-socketio>=5.11.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+dev-dependencies = []
+

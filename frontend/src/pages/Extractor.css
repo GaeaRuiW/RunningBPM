@@ -1,0 +1,31 @@
+.extractor-page {
+    width: 100%;
+}
+
+.settings-grid.single-column {
+    display: grid;
+    grid-template-columns: 1fr;
+    max-width: 500px;
+    margin: 0 auto 3rem;
+}
+
+.settings-grid.single-column .setting-card {
+    text-align: center;
+}
+
+.settings-grid.single-column select {
+    width: 100%;
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    color: white;
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+    cursor: pointer;
+}
+
+.settings-grid.single-column select:focus {
+    outline: none;
+    border-color: #a855f7;
+}
