@@ -1,5 +1,4 @@
-import React, { useCallback, useState } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useRef } from 'react';
 import './FileUploadZone.css';
 
 interface FileUploadZoneProps {
@@ -8,7 +7,7 @@ interface FileUploadZoneProps {
     multiple?: boolean;
     maxFiles?: number;
     label?: string;
-    id?: string;
+    id: string;
 }
 
 const FileUploadZone: React.FC<FileUploadZoneProps> = ({
@@ -16,89 +15,53 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({
     accept = "audio/*",
     multiple = false,
     maxFiles = 10,
-    label = "拖拽音频文件到这里，或点击上传",
-    id = "file-upload-input"
+    label = "Drop files here or click to browse",
+    id
 }) => {
     const [isDragging, setIsDragging] = useState(false);
+    const inputRef = useRef<HTMLInputElement>(null);
 
-    const handleDragEnter = useCallback((e: React.DragEvent) => {
+    const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
-        e.stopPropagation();
         setIsDragging(true);
-    }, []);
+    };
 
-    const handleDragLeave = useCallback((e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
+    const handleDragLeave = () => {
         setIsDragging(false);
-    }, []);
+    };
 
-    const handleDragOver = useCallback((e: React.DragEvent) => {
+    const handleDrop = (e: React.DragEvent) => {
         e.preventDefault();
-        e.stopPropagation();
-    }, []);
-
-    const handleDrop = useCallback((e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
         setIsDragging(false);
+        const files = Array.from(e.dataTransfer.files).slice(0, maxFiles);
+        if (files.length > 0) onFilesSelected(files);
+    };
 
-        const files = Array.from(e.dataTransfer.files);
-        if (files.length > 0) {
-            onFilesSelected(files);
-        }
-    }, [onFilesSelected]);
-
-    const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files.length > 0) {
-            const files = Array.from(e.target.files);
-            onFilesSelected(files);
-        }
-    }, [onFilesSelected]);
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []).slice(0, maxFiles);
+        if (files.length > 0) onFilesSelected(files);
+    };
 
     return (
-        <motion.div
+        <label
+            htmlFor={id}
             className={`file-upload-zone ${isDragging ? 'dragging' : ''}`}
-            onDragEnter={handleDragEnter}
-            onDragLeave={handleDragLeave}
             onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
             onDrop={handleDrop}
-            whileHover={{ scale: 1.01 }}
-            whileTap={{ scale: 0.99 }}
-            animate={isDragging ? { scale: 1.02, borderColor: '#a855f7', backgroundColor: 'rgba(168, 85, 247, 0.1)' } : {}}
         >
+            <div className="upload-icon">+</div>
+            <span className="upload-label">{label}</span>
+            <span className="upload-hint">Supports MP3, WAV, FLAC, M4A, OGG</span>
             <input
+                ref={inputRef}
+                id={id}
                 type="file"
                 accept={accept}
                 multiple={multiple}
-                onChange={handleFileInput}
-                className="file-input-hidden"
-                id={id}
+                onChange={handleChange}
             />
-            <label htmlFor={id} className="upload-label">
-                <motion.div
-                    className="upload-icon"
-                    animate={isDragging ? { y: [0, -10, 0] } : {}}
-                    transition={{ repeat: Infinity, duration: 1.5 }}
-                >
-                    ☁️
-                </motion.div>
-                <h3>{isDragging ? "快松手! 🔥" : "上传音频"}</h3>
-                <p>{label}</p>
-                <div className="upload-hint">
-                    支持格式: MP3, WAV, FLAC {multiple ? `(最多 ${maxFiles} 个文件)` : ''}
-                </div>
-            </label>
-
-            {isDragging && (
-                <motion.div
-                    className="pulse-ring"
-                    initial={{ scale: 0.8, opacity: 0 }}
-                    animate={{ scale: 1.5, opacity: 0 }}
-                    transition={{ duration: 1, repeat: Infinity }}
-                />
-            )}
-        </motion.div>
+        </label>
     );
 };
 

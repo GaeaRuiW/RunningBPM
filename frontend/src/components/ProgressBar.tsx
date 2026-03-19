@@ -1,5 +1,4 @@
 import React from 'react';
-import '../App.css';
 
 interface ProgressBarProps {
   progress: number;
@@ -9,15 +8,18 @@ interface ProgressBarProps {
 
 const ProgressBar: React.FC<ProgressBarProps> = ({ progress, message, status }) => {
   return (
-    <div className="progress-container">
-      <div className="progress-info">
-        <span className="progress-message">{message}</span>
-        <span className="progress-percentage">{progress}%</span>
+    <div style={{ width: '100%' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: '0.85rem' }}>
+        <span style={{ color: 'var(--text-secondary)' }}>{message}</span>
+        <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{progress}%</span>
       </div>
-      <div className="progress-bar-wrapper">
+      <div className="progress-bar-container">
         <div
-          className={`progress-bar ${status}`}
-          style={{ width: `${progress}%` }}
+          className="progress-fill"
+          style={{
+            width: `${progress}%`,
+            background: status === 'failed' ? 'var(--error)' : status === 'completed' ? 'var(--success)' : 'var(--accent)'
+          }}
         />
       </div>
     </div>
@@ -25,4 +27,3 @@ const ProgressBar: React.FC<ProgressBarProps> = ({ progress, message, status }) 
 };
 
 export default ProgressBar;
-

@@ -4,7 +4,6 @@ import { motion } from 'framer-motion';
 import Wizard from '../components/shared/Wizard';
 import FileUploadZone from '../components/shared/FileUploadZone';
 import AudioPlayer from '../components/AudioPlayer';
-import MixingAnimation from '../components/MixingAnimation';
 import './Mixer.css';
 
 const API_BASE_URL = 'http://localhost:8000';
@@ -229,7 +228,7 @@ const Mixer: React.FC = () => {
                             </div>
                         </div>
 
-                        <div className="checkbox-wrapper glass-panel">
+                        <div className="checkbox-wrapper">
                             <label className="checkbox-label">
                                 <input
                                     type="checkbox"
@@ -319,7 +318,7 @@ const Mixer: React.FC = () => {
                                 ← 返回
                             </button>
                             <button className="action-button primary" onClick={handleSubmit}>
-                                开始处理 🚀
+                                开始处理
                             </button>
                         </div>
                     </div>
@@ -329,7 +328,10 @@ const Mixer: React.FC = () => {
                     <div className="step-container centered">
                         {loading ? (
                             <div className="processing-state">
-                                <MixingAnimation progress={progress} message={progressMessage} />
+                                <div className="loading-indicator">
+                                    <div className="spinner" />
+                                    <p>{progressMessage}</p>
+                                </div>
                                 <div className="progress-bar-container" style={{ marginTop: '20px' }}>
                                     <motion.div
                                         className="progress-fill"
@@ -341,7 +343,7 @@ const Mixer: React.FC = () => {
                             </div>
                         ) : outputFiles.length > 0 ? (
                             <div className="success-state">
-                                <div className="success-icon">✅</div>
+                                <div className="success-icon">{"\u2713"}</div>
                                 <h3>处理完成!</h3>
                                 <p>成功生成 {outputFiles.length} 个文件。</p>
 
@@ -352,7 +354,7 @@ const Mixer: React.FC = () => {
                                             <div className="result-actions">
                                                 <AudioPlayer audioUrl={file.download_url} filename={file.filename} />
                                                 <a href={file.download_url} download={file.filename} className="download-btn">
-                                                    📥
+                                                    下载
                                                 </a>
                                             </div>
                                         </div>
@@ -361,7 +363,7 @@ const Mixer: React.FC = () => {
 
                                 {outputFiles.length > 1 && (
                                     <button onClick={handleBatchDownload} className="action-button primary">
-                                        📦 批量下载 ZIP
+                                        批量下载 ZIP
                                     </button>
                                 )}
 

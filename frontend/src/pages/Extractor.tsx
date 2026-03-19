@@ -4,7 +4,6 @@ import { motion } from 'framer-motion';
 import Wizard from '../components/shared/Wizard';
 import FileUploadZone from '../components/shared/FileUploadZone';
 import AudioPlayer from '../components/AudioPlayer';
-import MetronomeDetectionAnimation from '../components/MetronomeDetectionAnimation';
 import './Extractor.css';
 
 const API_BASE_URL = 'http://localhost:8000';
@@ -182,7 +181,7 @@ const Extractor: React.FC = () => {
                                 ← 返回
                             </button>
                             <button className="action-button primary" onClick={handleSubmit}>
-                                开始提取 🥁
+                                开始提取
                             </button>
                         </div>
                     </div>
@@ -192,7 +191,10 @@ const Extractor: React.FC = () => {
                     <div className="step-container centered">
                         {loading ? (
                             <div className="processing-state">
-                                <MetronomeDetectionAnimation progress={progress} message={progressMessage} />
+                                <div className="loading-indicator">
+                                    <div className="spinner" />
+                                    <p>{progressMessage}</p>
+                                </div>
                                 <div className="progress-bar-container" style={{ marginTop: '20px' }}>
                                     <motion.div
                                         className="progress-fill"
@@ -204,7 +206,7 @@ const Extractor: React.FC = () => {
                             </div>
                         ) : downloadUrl ? (
                             <div className="success-state">
-                                <div className="success-icon">✅</div>
+                                <div className="success-icon">{"\u2713"}</div>
                                 <h3>提取完成!</h3>
                                 <p>节拍器音轨已分离。</p>
 
@@ -215,7 +217,7 @@ const Extractor: React.FC = () => {
                                     <div className="result-actions-row">
                                         <AudioPlayer audioUrl={downloadUrl} filename={filename || 'metronome.mp3'} />
                                         <a href={downloadUrl} download={filename || 'metronome.mp3'} className="download-btn large">
-                                            📥 下载节拍器
+                                            下载节拍器
                                         </a>
                                     </div>
                                 </div>

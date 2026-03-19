@@ -1,51 +1,45 @@
 import React from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import InteractiveBackground from './InteractiveBackground';
+import { AnimatePresence, motion } from 'framer-motion';
 import './Layout.css';
 
 const MainLayout: React.FC = () => {
     return (
         <div className="layout-container">
-            <aside className="sidebar">
+            <nav className="sidebar">
                 <div className="logo-container">
-                    <h1>🏃 RunningBPM</h1>
-                    <p>Sonic Flow 版</p>
+                    <h1>Running<span>BPM</span></h1>
                 </div>
-
-                <nav className="nav-menu">
-                    <NavLink to="/" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-                        <span className="icon">🏠</span> 仪表盘
+                <div className="nav-menu">
+                    <NavLink to="/" end className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                        Dashboard
                     </NavLink>
                     <NavLink to="/mixer" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-                        <span className="icon">🎚️</span> 音频合成
+                        Mixer
                     </NavLink>
                     <NavLink to="/stitcher" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-                        <span className="icon">🔗</span> 音乐拼接
+                        Stitcher
                     </NavLink>
                     <NavLink to="/extractor" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-                        <span className="icon">🥁</span> 节拍器提取
+                        Extractor
                     </NavLink>
-                </nav>
-
-                <div className="sidebar-footer">
-                    <p>© 2025 RunningBPM</p>
                 </div>
-            </aside>
-
+            </nav>
             <main className="content-area">
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.3 }}
-                    className="page-content"
-                >
-                    <Outlet />
-                </motion.div>
+                <div className="page-content">
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={window.location.pathname}
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                        >
+                            <Outlet />
+                        </motion.div>
+                    </AnimatePresence>
+                </div>
             </main>
-
-            <InteractiveBackground />
         </div>
     );
 };

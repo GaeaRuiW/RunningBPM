@@ -3,7 +3,6 @@ import axios from 'axios';
 import { motion } from 'framer-motion';
 import Wizard from '../components/shared/Wizard';
 import FileUploadZone from '../components/shared/FileUploadZone';
-import AudioVisualizer from '../components/shared/AudioVisualizer';
 import AudioPlayer from '../components/AudioPlayer';
 import './Stitcher.css';
 
@@ -228,7 +227,7 @@ const Stitcher: React.FC = () => {
                                 ← 返回
                             </button>
                             <button className="action-button primary" onClick={handleSubmit}>
-                                开始拼接 🔗
+                                开始拼接
                             </button>
                         </div>
                     </div>
@@ -238,8 +237,10 @@ const Stitcher: React.FC = () => {
                     <div className="step-container centered">
                         {loading ? (
                             <div className="processing-state">
-                                <AudioVisualizer isPlaying={true} />
-                                <h3>{progressMessage}</h3>
+                                <div className="loading-indicator">
+                                    <div className="spinner" />
+                                    <p>{progressMessage}</p>
+                                </div>
                                 <div className="progress-bar-container">
                                     <motion.div
                                         className="progress-fill"
@@ -251,7 +252,7 @@ const Stitcher: React.FC = () => {
                             </div>
                         ) : downloadUrl ? (
                             <div className="success-state">
-                                <div className="success-icon">✅</div>
+                                <div className="success-icon">{"\u2713"}</div>
                                 <h3>拼接完成!</h3>
                                 <p>您的长音乐已准备就绪。</p>
 
@@ -262,7 +263,7 @@ const Stitcher: React.FC = () => {
                                     <div className="result-actions-row">
                                         <AudioPlayer audioUrl={downloadUrl} filename={filename || 'mix.mp3'} />
                                         <a href={downloadUrl} download={filename || 'mix.mp3'} className="download-btn large">
-                                            📥 下载拼接音乐
+                                            下载拼接音乐
                                         </a>
                                     </div>
                                 </div>

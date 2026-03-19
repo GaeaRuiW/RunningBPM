@@ -1,31 +1,54 @@
 .extractor-page {
-    width: 100%;
+  width: 100%;
+}
+
+.upload-section.full-width {
+  width: 100%;
+}
+
+.upload-section.full-width h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 12px;
 }
 
 .settings-grid.single-column {
-    display: grid;
-    grid-template-columns: 1fr;
-    max-width: 500px;
-    margin: 0 auto 3rem;
+  display: flex;
+  flex-direction: column;
+  max-width: 440px;
+  gap: 20px;
 }
 
-.settings-grid.single-column .setting-card {
-    text-align: center;
+.result-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  max-width: 500px;
+  width: 100%;
+  box-shadow: var(--shadow-sm);
 }
 
-.settings-grid.single-column select {
-    width: 100%;
-    padding: 1rem;
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    color: white;
-    font-size: 1.1rem;
-    margin-bottom: 0.5rem;
-    cursor: pointer;
+.result-info {
+  margin-bottom: 16px;
 }
 
-.settings-grid.single-column select:focus {
-    outline: none;
-    border-color: #a855f7;
+.result-filename {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.result-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.download-btn.large {
+  flex: 1;
+  text-align: center;
+  padding: 10px 16px;
+  font-size: 0.9rem;
 }

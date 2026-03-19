@@ -1,98 +1,85 @@
 .wizard-container {
-    width: 100%;
-    max-width: 900px;
-    margin: 0 auto;
+  max-width: 860px;
 }
 
 .wizard-header {
-    margin-bottom: 3rem;
-    text-align: center;
+  margin-bottom: 32px;
 }
 
 .wizard-header h2 {
-    font-size: 2.5rem;
-    font-weight: 800;
-    margin-bottom: 2rem;
-    background: var(--primary-gradient);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 24px;
 }
 
 .steps-indicator {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0;
 }
 
 .step-item {
-    display: flex;
-    align-items: center;
-    gap: 0.8rem;
-    color: var(--text-secondary);
-    position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .step-number {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.1);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 1rem;
-    transition: all 0.3s ease;
-    border: 2px solid transparent;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: var(--bg-input);
+  color: var(--text-tertiary);
+  border: 2px solid var(--border);
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
 }
 
-.step-label {
-    font-weight: 600;
-    font-size: 0.9rem;
-    transition: all 0.3s ease;
+.step-item.completed .step-number {
+  background: var(--success);
+  border-color: var(--success);
+  color: #fff;
+}
+
+.step-item.current .step-number {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.step-name {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-tertiary);
+}
+
+.step-item.completed .step-name,
+.step-item.current .step-name {
+  color: var(--text-primary);
 }
 
 .step-line {
-    width: 60px;
-    height: 2px;
-    background: rgba(255, 255, 255, 0.1);
-    margin-left: 0.5rem;
+  width: 40px;
+  height: 2px;
+  background: var(--border);
+  margin: 0 8px;
 }
 
-/* Active State (Completed or Current) */
-.step-item.active .step-number {
-    background: var(--success-color);
-    color: white;
-}
-
-.step-item.active .step-label {
-    color: var(--text-primary);
-}
-
-.step-item.active .step-line {
-    background: var(--success-color);
-}
-
-/* Current State */
-.step-item.current .step-number {
-    background: transparent;
-    border-color: #a855f7;
-    color: #a855f7;
-    box-shadow: 0 0 15px rgba(168, 85, 247, 0.3);
-}
-
-.step-item.current .step-label {
-    color: #a855f7;
+.step-item.completed + .step-line,
+.step-line.completed {
+  background: var(--success);
 }
 
 .wizard-content {
-    background: rgba(255, 255, 255, 0.03);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border-radius: 24px;
-    padding: 3rem;
-    border: 1px solid var(--glass-border);
-    min-height: 400px;
-    position: relative;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  min-height: 360px;
+  box-shadow: var(--shadow-sm);
 }
