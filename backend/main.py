@@ -45,6 +45,15 @@ async def root():
     return {"message": "RunningBPM API is running"}
 
 
+@app.get("/api/server-info")
+async def server_info():
+    """获取服务器信息，包括 CPU 核心数（用于前端并发限制）"""
+    return {
+        "cpu_count": multiprocessing.cpu_count(),
+        "default_max_concurrent": min(multiprocessing.cpu_count(), 4)
+    }
+
+
 @app.get("/api/formats/{source_format}")
 async def get_available_formats(source_format: str):
     """
@@ -64,7 +73,8 @@ def process_combine_audio(
     target_bpm: int,
     output_format: str,
     auto_extract_metronome: bool,
-    metronome_volume: int = 0
+    metronome_volume: int = 0,
+    max_concurrent: int = 4
 ):
     """后台处理音频合成"""
     try:
@@ -136,7 +146,7 @@ def process_combine_audio(
         
         # 使用线程池并行处理多个文件
         # 限制最大线程数，避免资源耗尽
-        max_workers = min(total_files, multiprocessing.cpu_count(), 4)  # 最多4个线程
+        max_workers = min(total_files, multiprocessing.cpu_count(), max_concurrent)  # 使用前端传入的并发数限制
         
         def process_single_file(args):
             """处理单个文件的函数，用于并行执行"""
@@ -253,6 +263,7 @@ async def combine_audio(
     output_format: str = Form("mp3"),
     auto_extract_metronome: bool = Form(False),
     metronome_volume: int = Form(0),  # 节拍器音量调整 (dB), 默认0, 范围-20到+20
+    max_concurrent: int = Form(4),  # 最大并发处理数，默认4，范围1到cpu核心数
     task_id: Optional[str] = Form(None)
 ):
     """
@@ -266,6 +277,10 @@ async def combine_audio(
     - task_id: 可选的任务ID，用于进度跟踪
     """
     try:
+        # 限制 max_concurrent 范围: 1 到 CPU 核心数
+        cpu_count = multiprocessing.cpu_count()
+        max_concurrent = max(1, min(max_concurrent, cpu_count))
+        
         # 创建任务ID
         if not task_id:
             task_id = progress_service.create_task()
@@ -317,7 +332,8 @@ async def combine_audio(
             target_bpm=target_bpm,
             output_format=output_format,
             auto_extract_metronome=auto_extract_metronome,
-            metronome_volume=metronome_volume
+            metronome_volume=metronome_volume,
+            max_concurrent=max_concurrent
         )
         
         return {

@@ -52,4 +52,12 @@ backend/outputs/
 *.wav
 *.flac
 *.m4a
+*.ogg
+*.ape
+*.aac
+*.wma
+
+# Test/debug artifacts
+*.log
+extraction_baseline/
 

@@ -23,6 +23,8 @@ const Mixer: React.FC = () => {
     const [availableFormats, setAvailableFormats] = useState<string[]>(['mp3']);
     const [autoExtractMetronome, setAutoExtractMetronome] = useState<boolean>(false);
     const [metronomeVolume, setMetronomeVolume] = useState<number>(0);
+    const [maxConcurrent, setMaxConcurrent] = useState<number>(4);
+    const [serverCpuCount, setServerCpuCount] = useState<number>(4);
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -30,6 +32,20 @@ const Mixer: React.FC = () => {
     const [taskId, setTaskId] = useState<string | null>(null);
     const [progress, setProgress] = useState<number>(0);
     const [progressMessage, setProgressMessage] = useState<string>('');
+
+    // Fetch server info on mount
+    useEffect(() => {
+        const fetchServerInfo = async () => {
+            try {
+                const response = await axios.get(`${API_BASE_URL}/api/server-info`);
+                setServerCpuCount(response.data.cpu_count);
+                setMaxConcurrent(response.data.default_max_concurrent);
+            } catch (err) {
+                console.error('Failed to fetch server info:', err);
+            }
+        };
+        fetchServerInfo();
+    }, []);
 
     // Fetch formats when music files change
     useEffect(() => {
@@ -136,6 +152,7 @@ const Mixer: React.FC = () => {
             formData.append('output_format', outputFormat);
             formData.append('auto_extract_metronome', autoExtractMetronome.toString());
             formData.append('metronome_volume', metronomeVolume.toString());
+            formData.append('max_concurrent', maxConcurrent.toString());
 
             const response = await axios.post(`${API_BASE_URL}/api/combine`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
@@ -277,6 +294,23 @@ const Mixer: React.FC = () => {
                                     <span>0dB</span>
                                     <span>+20dB</span>
                                 </div>
+                            </div>
+
+                            <div className="setting-card full-width">
+                                <label>最大并发数 ({maxConcurrent})</label>
+                                <input
+                                    type="range"
+                                    min="1"
+                                    max={serverCpuCount}
+                                    value={maxConcurrent}
+                                    onChange={(e) => setMaxConcurrent(parseInt(e.target.value))}
+                                />
+                                <div className="range-labels">
+                                    <span>1</span>
+                                    <span>{Math.ceil(serverCpuCount / 2)}</span>
+                                    <span>{serverCpuCount}</span>
+                                </div>
+                                <small>同时处理的文件数量，服务器最多支持 {serverCpuCount} 个并发</small>
                             </div>
                         </div>
 

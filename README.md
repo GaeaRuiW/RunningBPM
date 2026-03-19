@@ -21,22 +21,39 @@
 
 ```
 RunningBPM/
-├── backend/              # FastAPI 后端
-│   ├── main.py          # 主应用文件
-│   ├── services/        # 业务逻辑服务
-│   │   └── audio_service.py  # 音频处理服务
-│   ├── uploads/         # 上传文件目录
-│   ├── outputs/         # 输出文件目录
-│   └── requirements.txt # Python 依赖
-├── frontend/            # React 前端
+├── backend/                  # FastAPI 后端
+│   ├── main.py              # 主应用入口
+│   ├── services/            # 业务逻辑服务
+│   │   ├── audio_service.py     # 音频处理服务
+│   │   ├── format_service.py    # 格式检测与转换
+│   │   └── progress_service.py  # 任务进度管理
+│   ├── pyproject.toml       # Python 项目配置 (uv)
+│   ├── requirements.txt     # Python 依赖
+│   └── Dockerfile           # 后端容器
+├── frontend/                # React 前端
 │   ├── src/
-│   │   ├── components/  # React 组件
-│   │   │   ├── CombineAudio.tsx      # 音频合成组件
-│   │   │   ├── ExtractMetronome.tsx   # 节拍器提取组件
-│   │   │   └── ConcatenateAudio.tsx   # 音乐拼接组件
-│   │   ├── App.tsx      # 主应用组件
-│   │   └── index.tsx    # 入口文件
-│   └── package.json     # Node.js 依赖
+│   │   ├── pages/           # 页面组件
+│   │   │   ├── Dashboard.tsx    # 首页仪表盘
+│   │   │   ├── Mixer.tsx        # 音频合成页面
+│   │   │   ├── Extractor.tsx    # 节拍器提取页面
+│   │   │   └── Stitcher.tsx     # 音乐拼接页面
+│   │   ├── components/      # 共享组件
+│   │   ├── App.tsx          # 路由配置
+│   │   └── index.tsx        # 入口文件
+│   ├── public/              # 静态资源
+│   ├── nginx.conf           # Nginx 反向代理配置
+│   ├── package.json         # Node.js 依赖
+│   └── Dockerfile           # 前端容器
+├── .github/                 # GitHub 配置
+│   ├── workflows/ci.yml     # CI/CD 流水线
+│   ├── ISSUE_TEMPLATE/      # Issue 模板
+│   ├── PULL_REQUEST_TEMPLATE.md
+│   └── SECURITY.md          # 安全政策
+├── docker-compose.yml       # Docker 编排
+├── CODE_OF_CONDUCT.md       # 行为准则
+├── CONTRIBUTING.md          # 贡献指南
+├── CHANGELOG.md             # 更新日志
+├── LICENSE                  # MIT 许可证
 └── README.md
 ```
 
@@ -114,6 +131,8 @@ npm start
   - `target_bpm`: 目标步频（整数）
   - `output_format`: 输出格式（默认 mp3）
   - `auto_extract_metronome`: 是否自动提取节拍器（布尔值，默认 false）
+  - `metronome_volume`: 节拍器音量调整（dB，默认 0，范围 -20 到 +20）
+  - `max_concurrent`: 最大并发处理数（默认 4，范围 1 到 CPU 核心数）
 - **返回**：包含 `task_id` 和 `files` 数组的 JSON（每个文件包含 `download_url` 和 `filename`）
 
 ### 2. 节拍器提取
@@ -135,19 +154,23 @@ npm start
 - **端点**：`GET /api/formats/{source_format}`
 - **返回**：可用的输出格式列表
 
-### 5. 获取进度
+### 5. 获取服务器信息
+- **端点**：`GET /api/server-info`
+- **返回**：服务器 CPU 核心数和默认最大并发数
+
+### 6. 获取进度
 - **端点**：`GET /api/progress/{task_id}`
 - **返回**：任务进度信息（进度百分比、状态、消息）
 
-### 6. WebSocket 进度更新
+### 7. WebSocket 进度更新
 - **端点**：`WS /ws/progress/{task_id}`
 - **返回**：实时进度更新（JSON）
 
-### 7. 文件下载
+### 8. 文件下载
 - **端点**：`GET /api/download/{filename}`
 - **返回**：处理后的音频文件
 
-### 8. 批量下载
+### 9. 批量下载
 - **端点**：`POST /api/batch-download`
 - **参数**：
   - `filenames`: 文件名列表（数组）
@@ -207,7 +230,7 @@ npm start
 
 ## 贡献
 
-欢迎提交 Issue 和 Pull Request！
+欢迎提交 Issue 和 Pull Request！请阅读 [贡献指南](CONTRIBUTING.md) 和 [行为准则](CODE_OF_CONDUCT.md)。
 
 ## 许可证
 
