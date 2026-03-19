@@ -81,3 +81,11 @@
   min-height: 340px;
   box-shadow: var(--shadow-sm);
 }
+
+@media (max-width: 768px) {
+  .wizard-header h2 { font-size: 1.2rem; }
+  .steps-indicator { flex-wrap: wrap; gap: 4px; }
+  .step-name { display: none; }
+  .step-line { width: 20px; margin: 0 4px; }
+  .wizard-content { padding: 20px 16px; min-height: auto; }
+}

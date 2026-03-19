@@ -20,6 +20,9 @@ COPY requirements.txt .
 # 使用 --no-cache 减少镜像大小
 RUN uv pip install --system --no-cache -r requirements.txt
 
+# 安装 gunicorn 用于生产部署
+RUN uv pip install --system --no-cache gunicorn
+
 # 复制应用代码
 COPY . .
 
@@ -38,5 +41,8 @@ RUN mkdir -p /app/.cache/torch
 # 暴露端口
 EXPOSE 8000
 
-# 启动命令
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 CMD curl -f http://localhost:8000/api/health || exit 1
+
+# 启动命令 - 使用 gunicorn + uvicorn worker 用于生产环境
+CMD ["gunicorn", "-w", "2", "-k", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000", "--timeout", "600", "main:app"]

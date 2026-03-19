@@ -84,3 +84,8 @@ small { font-size: 0.78rem; color: var(--text-tertiary); margin-top: 6px; displa
 }
 .loading-indicator .spinner { width: 48px; height: 48px; border-width: 4px; }
 .loading-indicator p { color: var(--text-secondary); font-size: 0.9rem; }
+
+@media (max-width: 768px) {
+  .action-button { padding: 12px 20px; font-size: 0.95rem; min-height: 44px; }
+  input[type="number"], input[type="text"], select { padding: 12px 14px; min-height: 44px; }
+}

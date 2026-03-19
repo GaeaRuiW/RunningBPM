@@ -7,13 +7,30 @@ services:
       dockerfile: Dockerfile
     container_name: runningbpm-backend
     ports:
-      - "8001:8000"
+      - "${BACKEND_PORT:-8000}:8000"
     volumes:
-      - ./backend/uploads:/app/uploads
-      - ./backend/outputs:/app/outputs
+      - uploads:/app/uploads
+      - outputs:/app/outputs
     environment:
       - PYTHONUNBUFFERED=1
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3000}
+      - MAX_FILE_SIZE=${MAX_FILE_SIZE:-524288000}
+      - CLEANUP_INTERVAL_HOURS=${CLEANUP_INTERVAL_HOURS:-1}
+      - CLEANUP_MAX_AGE_HOURS=${CLEANUP_MAX_AGE_HOURS:-24}
+      - MAX_GLOBAL_TASKS=${MAX_GLOBAL_TASKS:-10}
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 1G
     networks:
       - runningbpm-network
 
@@ -23,9 +40,10 @@ services:
       dockerfile: Dockerfile
     container_name: runningbpm-frontend
     ports:
-      - "3000:80"
+      - "${FRONTEND_PORT:-3000}:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - runningbpm-network
@@ -37,4 +55,3 @@ networks:
 volumes:
   uploads:
   outputs:
-

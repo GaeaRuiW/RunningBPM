@@ -52,3 +52,10 @@
   padding: 10px 16px;
   font-size: 0.9rem;
 }
+
+@media (max-width: 768px) {
+  .settings-grid.single-column { max-width: 100%; }
+  .result-card { max-width: 100%; }
+  .result-actions-row { flex-direction: column; }
+  .download-btn.large { width: 100%; text-align: center; }
+}

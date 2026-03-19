@@ -1,30 +1,73 @@
-from fastapi import FastAPI, File, UploadFile, Form, HTTPException, BackgroundTasks, Body
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, StreamingResponse
-from fastapi.websockets import WebSocket, WebSocketDisconnect
-from pydantic import BaseModel
 import os
+import re
+import time
+import logging
+import threading
 import uuid
 import zipfile
 import asyncio
 import aiofiles
+import json
+import shutil
+import multiprocessing
+from datetime import datetime
 from typing import List, Optional
 from pathlib import Path
-import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import multiprocessing
-import shutil
+
+from fastapi import FastAPI, File, UploadFile, Form, HTTPException, BackgroundTasks, Body, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.websockets import WebSocket, WebSocketDisconnect
 from fastapi.concurrency import run_in_threadpool
+from pydantic import BaseModel
+from starlette.responses import JSONResponse
+
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+
 from services.audio_service import AudioService
 from services.format_service import FormatService
 from services.progress_service import progress_service
 
-app = FastAPI(title="RunningBPM API", version="1.0.0")
+# ---------------------------------------------------------------------------
+# Logging
+# ---------------------------------------------------------------------------
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s'
+)
+logger = logging.getLogger("runningbpm")
+
+# ---------------------------------------------------------------------------
+# Environment config
+# ---------------------------------------------------------------------------
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+MAX_FILE_SIZE = int(os.getenv("MAX_FILE_SIZE", 524288000))  # 500MB
+CLEANUP_INTERVAL_HOURS = int(os.getenv("CLEANUP_INTERVAL_HOURS", 1))
+CLEANUP_MAX_AGE_HOURS = int(os.getenv("CLEANUP_MAX_AGE_HOURS", 24))
+MAX_GLOBAL_TASKS = int(os.getenv("MAX_GLOBAL_TASKS", 10))
+
+# ---------------------------------------------------------------------------
+# App creation
+# ---------------------------------------------------------------------------
+app = FastAPI(title="RunningBPM API", version="1.1.0")
+
+# Rate limiting
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request, exc):
+    return JSONResponse(status_code=429, content={"detail": "请求太频繁，请稍后再试"})
+
 
 # CORS 配置
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # React 开发服务器
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -36,13 +79,70 @@ OUTPUT_DIR = Path("outputs")
 UPLOAD_DIR.mkdir(exist_ok=True)
 OUTPUT_DIR.mkdir(exist_ok=True)
 
+# Global thread pool (reused across all tasks)
+global_executor = ThreadPoolExecutor(max_workers=min(multiprocessing.cpu_count(), 8))
+
 audio_service = AudioService()
 format_service = FormatService()
 
 
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+def sanitize_filename(filename: str) -> str:
+    """Remove potentially dangerous characters from filenames"""
+    # Keep unicode chars (Chinese), alphanumeric, spaces, dots, hyphens, underscores
+    name = re.sub(r'[^\w\s.\-\u4e00-\u9fff\u3400-\u4dbf]', '', filename)
+    # Prevent path traversal
+    name = name.replace('..', '').strip('. ')
+    return name or 'unnamed'
+
+
+# ---------------------------------------------------------------------------
+# Background cleanup worker
+# ---------------------------------------------------------------------------
+def cleanup_worker():
+    """Background thread for periodic file & task cleanup"""
+    while True:
+        time.sleep(CLEANUP_INTERVAL_HOURS * 3600)
+        try:
+            # Clean old files
+            cutoff = time.time() - (CLEANUP_MAX_AGE_HOURS * 3600)
+            for directory in [UPLOAD_DIR, OUTPUT_DIR]:
+                for f in directory.iterdir():
+                    if f.is_file() and f.stat().st_mtime < cutoff:
+                        f.unlink(missing_ok=True)
+                        logger.info(f"Cleaned up: {f.name}")
+            # Clean old task progress
+            cleaned = progress_service.cleanup_old_tasks(CLEANUP_MAX_AGE_HOURS)
+            if cleaned:
+                logger.info(f"Cleaned {cleaned} old task records")
+        except Exception as e:
+            logger.error(f"Cleanup error: {e}")
+
+
+@app.on_event("startup")
+async def startup_event():
+    thread = threading.Thread(target=cleanup_worker, daemon=True)
+    thread.start()
+    logger.info("RunningBPM backend started")
+
+
+# ---------------------------------------------------------------------------
+# Endpoints
+# ---------------------------------------------------------------------------
 @app.get("/")
 async def root():
     return {"message": "RunningBPM API is running"}
+
+
+@app.get("/api/health")
+async def health_check():
+    return {
+        "status": "healthy",
+        "timestamp": datetime.now().isoformat(),
+        "version": "1.1.0"
+    }
 
 
 @app.get("/api/server-info")
@@ -66,6 +166,20 @@ async def get_available_formats(source_format: str):
     }
 
 
+# ---------------------------------------------------------------------------
+# Task cancellation
+# ---------------------------------------------------------------------------
+@app.post("/api/cancel/{task_id}")
+async def cancel_task(task_id: str):
+    success = progress_service.cancel_task(task_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="任务不存在或已完成")
+    return {"success": True, "message": "任务已取消"}
+
+
+# ---------------------------------------------------------------------------
+# Combine audio (background worker)
+# ---------------------------------------------------------------------------
 def process_combine_audio(
     task_id: str,
     metronome_path: Path,
@@ -79,98 +193,84 @@ def process_combine_audio(
     """后台处理音频合成"""
     try:
         progress_service.update_progress(task_id, 5, "文件上传完成，开始处理...")
-        
-        # 如果需要自动提取节拍器
-        # if auto_extract_metronome:
-        #     progress_service.update_progress(task_id, 6, "准备提取节拍器...")
-        #     metronome_id = metronome_path.stem.split('_')[0]
-        #     extracted_metronome_path = UPLOAD_DIR / f"extracted_{metronome_id}.{output_format}"
-            
-        #     progress_service.update_progress(task_id, 7, "从上传文件中提取节拍器...")
-            
-        #     def extract_progress_callback(progress: int, message: str):
-        #         # 提取进度映射到 7-18%
-        #         mapped_progress = 7 + int(progress * 0.11)
-        #         progress_service.update_progress(task_id, mapped_progress, f"提取节拍器: {message}")
-            
-        #     audio_service.extract_metronome(
-        #         music_path=str(metronome_path),
-        #         output_path=str(extracted_metronome_path),
-        #         output_format=output_format,
-        #         progress_callback=extract_progress_callback
-        #     )
-        #     metronome_path = extracted_metronome_path
-        #     progress_service.update_progress(task_id, 19, "节拍器提取完成")
-        
+
         # 检测源格式
         progress_service.update_progress(task_id, 20 if auto_extract_metronome else 6, "检测音频文件格式...")
         source_formats = []
         total_files = len(music_paths)
-        
+
         for idx, music_path in enumerate(music_paths):
+            # Check cancellation between files
+            if progress_service.is_cancelled(task_id):
+                logger.info(f"Task {task_id} cancelled")
+                return
+
             if total_files > 1:
                 format_progress = (20 if auto_extract_metronome else 6) + int((idx / total_files) * 2)
                 progress_service.update_progress(
-                    task_id, 
-                    format_progress, 
+                    task_id,
+                    format_progress,
                     f"检测文件 {idx + 1}/{total_files} 的格式..."
                 )
             source_format = format_service.detect_format(music_path) or "mp3"
             source_formats.append(source_format)
-        
+
         # 使用最高质量的源格式作为基准
         max_quality_format = max(source_formats, key=lambda f: format_service.get_format_quality(f))
-        
+
         progress_service.update_progress(
-            task_id, 
-            22 if auto_extract_metronome else 8, 
+            task_id,
+            22 if auto_extract_metronome else 8,
             f"检测到最高质量格式: {max_quality_format}"
         )
-        
+
         # 验证输出格式
         progress_service.update_progress(
-            task_id, 
-            23 if auto_extract_metronome else 9, 
+            task_id,
+            23 if auto_extract_metronome else 9,
             f"验证输出格式: {output_format}"
         )
-        
+
         if not format_service.can_convert(max_quality_format, output_format):
             progress_service.fail_task(task_id, f"无法从 {max_quality_format} 转换为 {output_format}")
             return
-        
+
         # 批量处理每个音乐文件 - 使用多线程并行处理
         output_files = []
         base_progress = 24 if auto_extract_metronome else 10
-        
+
         progress_service.update_progress(task_id, base_progress, f"准备并行处理 {total_files} 个音乐文件...")
-        
-        # 使用线程池并行处理多个文件
+
         # 限制最大线程数，避免资源耗尽
-        max_workers = min(total_files, multiprocessing.cpu_count(), max_concurrent)  # 使用前端传入的并发数限制
-        
+        max_workers = min(total_files, multiprocessing.cpu_count(), max_concurrent)
+
         def process_single_file(args):
             """处理单个文件的函数，用于并行执行"""
             idx, music_path, metronome_path_str, target_bpm, output_format, task_id, base_progress, total = args
-            
+
+            # Check cancellation before starting
+            if progress_service.is_cancelled(task_id):
+                return {"success": False, "idx": idx, "error": "任务已取消"}
+
             # Remove UUID prefix (36 chars + 1 underscore)
             original_stem = Path(music_path).stem[37:]
             output_filename = f"{original_stem} {target_bpm}bpm.{output_format}"
             output_path = OUTPUT_DIR / output_filename
-            
+
             # 创建进度回调
             def progress_callback(progress: int, message: str):
                 # 单个文件的进度映射：每个文件占 (70 / total) 的进度
                 file_base = base_progress + int((idx / total) * 70)
                 file_progress = file_base + int((progress / 100) * (70 / total))
                 progress_service.update_progress(
-                    task_id, 
-                    file_progress, 
+                    task_id,
+                    file_progress,
                     f"处理文件 {idx + 1}/{total}: {message}"
                 )
-            
+
             try:
-                audio_service = AudioService()
-                audio_service.combine_audio(
+                audio_svc = AudioService()
+                audio_svc.combine_audio(
                     metronome_path=metronome_path_str,
                     music_path=music_path,
                     target_bpm=target_bpm,
@@ -179,7 +279,7 @@ def process_combine_audio(
                     metronome_volume=metronome_volume,
                     progress_callback=progress_callback
                 )
-                
+
                 return {
                     "success": True,
                     "idx": idx,
@@ -194,44 +294,51 @@ def process_combine_audio(
                     "idx": idx,
                     "error": str(e)
                 }
-        
+
         # 准备任务参数
         tasks = [
             (idx, music_path, str(metronome_path), target_bpm, output_format, task_id, base_progress, total_files)
             for idx, music_path in enumerate(music_paths)
         ]
-        
-        # 使用线程池并行执行
+
+        # 使用全局线程池并行执行
         completed_count = 0
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            # 提交所有任务
-            future_to_task = {executor.submit(process_single_file, task): task for task in tasks}
-            
-            # 收集结果
-            results = {}
-            for future in as_completed(future_to_task):
-                completed_count += 1
-                try:
-                    result = future.result()
-                    results[result["idx"]] = result
-                    
-                    # 更新总体进度
-                    overall_progress = base_progress + int((completed_count / total_files) * 70)
-                    progress_service.update_progress(
-                        task_id,
-                        overall_progress,
-                        f"已完成 {completed_count}/{total_files} 个文件"
-                    )
-                except Exception as e:
-                    # 处理异常
-                    task = future_to_task[future]
-                    idx = task[0]
-                    results[idx] = {
-                        "success": False,
-                        "idx": idx,
-                        "error": str(e)
-                    }
-        
+        futures = {global_executor.submit(process_single_file, task): task for task in tasks}
+
+        # 收集结果
+        results = {}
+        for future in as_completed(futures):
+            completed_count += 1
+
+            # Check cancellation
+            if progress_service.is_cancelled(task_id):
+                logger.info(f"Task {task_id} cancelled during processing")
+                # Cancel remaining futures
+                for f in futures:
+                    f.cancel()
+                return
+
+            try:
+                result = future.result()
+                results[result["idx"]] = result
+
+                # 更新总体进度
+                overall_progress = base_progress + int((completed_count / total_files) * 70)
+                progress_service.update_progress(
+                    task_id,
+                    overall_progress,
+                    f"已完成 {completed_count}/{total_files} 个文件"
+                )
+            except Exception as e:
+                # 处理异常
+                task = futures[future]
+                idx = task[0]
+                results[idx] = {
+                    "success": False,
+                    "idx": idx,
+                    "error": str(e)
+                }
+
         # 按原始顺序整理结果
         for idx in range(total_files):
             if idx in results:
@@ -245,17 +352,20 @@ def process_combine_audio(
                         base_progress + int((idx / total_files) * 70),
                         f"文件 {idx + 1} 处理失败: {result.get('error', '未知错误')}"
                     )
-        
+
         progress_service.complete_task(task_id, {
             "files": output_files,
             "count": len(output_files)
         })
     except Exception as e:
+        logger.error(f"Task {task_id} failed: {e}", exc_info=True)
         progress_service.fail_task(task_id, str(e))
 
 
 @app.post("/api/combine")
+@limiter.limit("10/minute")
 async def combine_audio(
+    request: Request,
     background_tasks: BackgroundTasks,
     metronome: UploadFile = File(...),
     music_files: List[UploadFile] = File(...),
@@ -277,51 +387,69 @@ async def combine_audio(
     - task_id: 可选的任务ID，用于进度跟踪
     """
     try:
+        # Parameter validation
+        if not 60 <= target_bpm <= 300:
+            raise HTTPException(status_code=400, detail="BPM 必须在 60-300 之间")
+        metronome_volume = max(-20, min(20, metronome_volume))
+
         # 限制 max_concurrent 范围: 1 到 CPU 核心数
         cpu_count = multiprocessing.cpu_count()
         max_concurrent = max(1, min(max_concurrent, cpu_count))
-        
+
         # 创建任务ID
         if not task_id:
             task_id = progress_service.create_task()
         else:
             progress_service.create_task(task_id)
-        
+
+        total_files = len(music_files)
+        logger.info(f"New combine task: {task_id}, {total_files} files, {target_bpm} BPM")
+
         progress_service.update_progress(task_id, 2, "接收文件上传...")
-        
+
         # 准备文件路径
         metronome_id = str(uuid.uuid4())
-        metronome_path = UPLOAD_DIR / f"{metronome_id}_{metronome.filename}"
-        
+        metronome_path = UPLOAD_DIR / f"{metronome_id}_{sanitize_filename(metronome.filename)}"
+
         # 立即保存文件 (使用线程池避免阻塞主循环)
         progress_service.update_progress(task_id, 3, "保存节拍器文件...")
-        
+
         def save_file_sync(upload_file, destination):
             with open(destination, "wb") as buffer:
                 shutil.copyfileobj(upload_file.file, buffer)
-                
+
         await run_in_threadpool(save_file_sync, metronome, metronome_path)
-        
+
+        # Validate file size
+        if metronome_path.stat().st_size > MAX_FILE_SIZE:
+            metronome_path.unlink(missing_ok=True)
+            raise HTTPException(status_code=400, detail=f"节拍器文件过大，最大允许 {MAX_FILE_SIZE // (1024*1024)}MB")
+
         # 保存音乐文件
         music_paths = []
-        total_files = len(music_files)
         progress_service.update_progress(task_id, 4, f"准备保存 {total_files} 个音乐文件...")
-        
+
         for idx, music_file in enumerate(music_files):
             music_id = str(uuid.uuid4())
-            music_path = UPLOAD_DIR / f"{music_id}_{music_file.filename}"
-            
+            music_path = UPLOAD_DIR / f"{music_id}_{sanitize_filename(music_file.filename)}"
+
             progress_service.update_progress(
-                task_id, 
-                4 + int((idx / total_files) * 1), 
+                task_id,
+                4 + int((idx / total_files) * 1),
                 f"保存音乐文件 {idx + 1}/{total_files}: {music_file.filename}"
             )
-            
+
             await run_in_threadpool(save_file_sync, music_file, music_path)
+
+            # Validate file size
+            if music_path.stat().st_size > MAX_FILE_SIZE:
+                music_path.unlink(missing_ok=True)
+                raise HTTPException(status_code=400, detail=f"音乐文件 {music_file.filename} 过大，最大允许 {MAX_FILE_SIZE // (1024*1024)}MB")
+
             music_paths.append(str(music_path))
-            
+
         progress_service.update_progress(task_id, 5, "文件上传完成，开始后台处理...")
-        
+
         # 添加后台任务
         # 注意：process_combine_audio 现在是同步函数，BackgroundTasks 会自动在线程池中运行它
         background_tasks.add_task(
@@ -335,40 +463,50 @@ async def combine_audio(
             metronome_volume=metronome_volume,
             max_concurrent=max_concurrent
         )
-        
+
         return {
             "success": True,
             "task_id": task_id,
             "message": "任务已创建，正在后台处理..."
         }
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.error(f"Combine endpoint error: {e}", exc_info=True)
         if task_id:
             progress_service.fail_task(task_id, str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ---------------------------------------------------------------------------
+# Extract metronome (background worker)
+# ---------------------------------------------------------------------------
 def process_extract_metronome(task_id: str, music_path: Path, output_path: Path, output_format: str, output_filename: str):
     """后台处理节拍器提取任务"""
     try:
         def progress_callback(progress: int, message: str):
             progress_service.update_progress(task_id, progress, message)
-        
+
         audio_service.extract_metronome(
             music_path=str(music_path),
             output_path=str(output_path),
             output_format=output_format,
             progress_callback=progress_callback
         )
-        
+
         progress_service.complete_task(task_id, {
             "download_url": f"/api/download/{output_filename}",
             "filename": output_filename
         })
     except Exception as e:
+        logger.error(f"Task {task_id} failed: {e}", exc_info=True)
         progress_service.fail_task(task_id, str(e))
 
+
 @app.post("/api/extract")
+@limiter.limit("10/minute")
 async def extract_metronome(
+    request: Request,
     background_tasks: BackgroundTasks,
     music: UploadFile = File(...),
     output_format: str = Form("mp3"),
@@ -386,16 +524,23 @@ async def extract_metronome(
             task_id = progress_service.create_task()
         else:
             progress_service.create_task(task_id)
-        
+
+        logger.info(f"New extract task: {task_id}")
+
         music_id = str(uuid.uuid4())
-        music_path = UPLOAD_DIR / f"{music_id}_{music.filename}"
-        
+        music_path = UPLOAD_DIR / f"{music_id}_{sanitize_filename(music.filename)}"
+
         progress_service.update_progress(task_id, 5, "上传文件中...")
-        
+
         with open(music_path, "wb") as f:
             content = await music.read()
             f.write(content)
-        
+
+        # Validate file size
+        if music_path.stat().st_size > MAX_FILE_SIZE:
+            music_path.unlink(missing_ok=True)
+            raise HTTPException(status_code=400, detail=f"文件过大，最大允许 {MAX_FILE_SIZE // (1024*1024)}MB")
+
         # 检测源格式并验证输出格式
         source_format = format_service.detect_format(str(music_path)) or "mp3"
         if not format_service.can_convert(source_format, output_format):
@@ -404,10 +549,10 @@ async def extract_metronome(
                 status_code=400,
                 detail=f"无法从 {source_format} 转换为 {output_format}。只能降级或同级转换。"
             )
-        
+
         output_filename = f"metronome_{uuid.uuid4()}.{output_format}"
         output_path = OUTPUT_DIR / output_filename
-        
+
         # 添加后台任务
         background_tasks.add_task(
             process_extract_metronome,
@@ -417,24 +562,30 @@ async def extract_metronome(
             output_format,
             output_filename
         )
-        
+
         return {
             "success": True,
             "task_id": task_id,
             "message": "任务已提交后台处理"
         }
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.error(f"Extract endpoint error: {e}", exc_info=True)
         if task_id:
             progress_service.fail_task(task_id, str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ---------------------------------------------------------------------------
+# Concatenate audio (background worker)
+# ---------------------------------------------------------------------------
 def process_concatenate_audio(task_id: str, music_paths: List[str], target_duration: float, output_path: Path, output_format: str, output_filename: str):
     """后台处理音频拼接任务"""
     try:
         def progress_callback(progress: int, message: str):
             progress_service.update_progress(task_id, progress, message)
-        
+
         audio_service.concatenate_audio(
             music_paths=music_paths,
             target_duration=target_duration,
@@ -442,16 +593,20 @@ def process_concatenate_audio(task_id: str, music_paths: List[str], target_durat
             output_format=output_format,
             progress_callback=progress_callback
         )
-        
+
         progress_service.complete_task(task_id, {
             "download_url": f"/api/download/{output_filename}",
             "filename": output_filename
         })
     except Exception as e:
+        logger.error(f"Task {task_id} failed: {e}", exc_info=True)
         progress_service.fail_task(task_id, str(e))
 
+
 @app.post("/api/concatenate")
+@limiter.limit("10/minute")
 async def concatenate_audio(
+    request: Request,
     background_tasks: BackgroundTasks,
     music_files: List[UploadFile] = File(...),
     target_duration: float = Form(...),
@@ -466,32 +621,43 @@ async def concatenate_audio(
     - task_id: 可选的任务ID，用于进度跟踪
     """
     try:
+        # Parameter validation
+        if not 60 <= target_duration <= 7200:
+            raise HTTPException(status_code=400, detail="时长必须在 60-7200 秒之间")
+
         # 创建任务ID
         if not task_id:
             task_id = progress_service.create_task()
         else:
             progress_service.create_task(task_id)
-        
+
+        logger.info(f"New concatenate task: {task_id}, {len(music_files)} files, {target_duration}s")
+
         music_paths = []
         source_formats = []
-        
+
         progress_service.update_progress(task_id, 5, "上传文件中...")
-        
+
         for idx, music_file in enumerate(music_files):
             music_id = str(uuid.uuid4())
-            music_path = UPLOAD_DIR / f"{music_id}_{music_file.filename}"
-            
+            music_path = UPLOAD_DIR / f"{music_id}_{sanitize_filename(music_file.filename)}"
+
             with open(music_path, "wb") as f:
                 content = await music_file.read()
                 f.write(content)
-            
+
+            # Validate file size
+            if music_path.stat().st_size > MAX_FILE_SIZE:
+                music_path.unlink(missing_ok=True)
+                raise HTTPException(status_code=400, detail=f"文件 {music_file.filename} 过大，最大允许 {MAX_FILE_SIZE // (1024*1024)}MB")
+
             music_paths.append(str(music_path))
             source_format = format_service.detect_format(str(music_path)) or "mp3"
             source_formats.append(source_format)
-        
+
         # 使用最高质量的源格式作为基准
         max_quality_format = max(source_formats, key=lambda f: format_service.get_format_quality(f))
-        
+
         # 验证输出格式
         if not format_service.can_convert(max_quality_format, output_format):
             progress_service.fail_task(task_id, f"无法从 {max_quality_format} 转换为 {output_format}")
@@ -499,10 +665,10 @@ async def concatenate_audio(
                 status_code=400,
                 detail=f"无法从 {max_quality_format} 转换为 {output_format}。只能降级或同级转换。"
             )
-        
+
         output_filename = f"concatenated_{uuid.uuid4()}.{output_format}"
         output_path = OUTPUT_DIR / output_filename
-        
+
         # 添加后台任务
         background_tasks.add_task(
             process_concatenate_audio,
@@ -513,18 +679,24 @@ async def concatenate_audio(
             output_format,
             output_filename
         )
-        
+
         return {
             "success": True,
             "task_id": task_id,
             "message": "任务已提交后台处理"
         }
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.error(f"Concatenate endpoint error: {e}", exc_info=True)
         if task_id:
             progress_service.fail_task(task_id, str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ---------------------------------------------------------------------------
+# Progress & WebSocket
+# ---------------------------------------------------------------------------
 @app.get("/api/progress/{task_id}")
 async def get_progress(task_id: str):
     """获取任务进度"""
@@ -544,28 +716,34 @@ async def websocket_progress(websocket: WebSocket, task_id: str):
             if not progress:
                 await websocket.send_json({"error": "Task not found"})
                 break
-            
+
             await websocket.send_json(progress)
-            
+
             if progress['status'] in ['completed', 'failed']:
                 break
-            
+
             await asyncio.sleep(0.5)  # 每0.5秒更新一次
     except WebSocketDisconnect:
         pass
 
 
+# ---------------------------------------------------------------------------
+# Download
+# ---------------------------------------------------------------------------
 @app.get("/api/download/{filename}")
 async def download_file(filename: str):
     """下载处理后的音频文件"""
-    file_path = OUTPUT_DIR / filename
+    file_path = (OUTPUT_DIR / filename).resolve()
+    # Path traversal protection
+    if not str(file_path).startswith(str(OUTPUT_DIR.resolve())):
+        raise HTTPException(status_code=400, detail="无效的文件名")
     if not file_path.exists():
-        raise HTTPException(status_code=404, detail="File not found")
-    
+        raise HTTPException(status_code=404, detail="文件未找到")
+
     # 检测格式
     format_name = os.path.splitext(filename)[1].lstrip('.')
     mime_type = format_service.get_format_mime_type(format_name)
-    
+
     return FileResponse(
         path=str(file_path),
         filename=filename,
@@ -587,13 +765,16 @@ async def batch_download(request: BatchDownloadRequest):
         # 创建临时 ZIP 文件
         zip_filename = f"batch_{uuid.uuid4()}.zip"
         zip_path = OUTPUT_DIR / zip_filename
-        
+
         with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
             for filename in request.filenames:
-                file_path = OUTPUT_DIR / filename
+                file_path = (OUTPUT_DIR / filename).resolve()
+                # Path traversal protection
+                if not str(file_path).startswith(str(OUTPUT_DIR.resolve())):
+                    continue
                 if file_path.exists():
                     zipf.write(file_path, filename)
-        
+
         return FileResponse(
             path=str(zip_path),
             filename=zip_filename,

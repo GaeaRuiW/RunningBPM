@@ -63,3 +63,9 @@
   font-size: 0.82rem;
   font-weight: 600;
 }
+
+@media (max-width: 768px) {
+  .dashboard-hero h1 { font-size: 1.35rem; }
+  .tools-grid { grid-template-columns: 1fr; gap: 12px; }
+  .tool-card { padding: 20px 16px; }
+}

@@ -4,9 +4,8 @@ import { motion } from 'framer-motion';
 import Wizard from '../components/shared/Wizard';
 import FileUploadZone from '../components/shared/FileUploadZone';
 import AudioPlayer from '../components/AudioPlayer';
+import { API_BASE_URL } from '../config';
 import './Extractor.css';
-
-const API_BASE_URL = 'http://localhost:8000';
 
 const Extractor: React.FC = () => {
     const [currentStep, setCurrentStep] = useState(0);
@@ -21,6 +20,9 @@ const Extractor: React.FC = () => {
     const [taskId, setTaskId] = useState<string | null>(null);
     const [progress, setProgress] = useState<number>(0);
     const [progressMessage, setProgressMessage] = useState<string>('');
+    const [, setPollErrors] = useState(0);
+    const [pollStartTime] = useState<number>(Date.now());
+    const [cancelling, setCancelling] = useState(false);
 
     useEffect(() => {
         if (musicFile) {
@@ -37,6 +39,7 @@ const Extractor: React.FC = () => {
                 const response = await axios.get(`${API_BASE_URL}/api/progress/${taskId}`);
                 setProgress(response.data.progress);
                 setProgressMessage(response.data.message);
+                setPollErrors(0);
 
                 if (response.data.status === 'completed') {
                     setLoading(false);
@@ -53,6 +56,21 @@ const Extractor: React.FC = () => {
                 return false;
             } catch (err) {
                 console.error('Failed to fetch progress:', err);
+                setPollErrors(prev => {
+                    const newCount = prev + 1;
+                    if (newCount >= 5) {
+                        setLoading(false);
+                        setError('无法连接服务器，请检查网络后重试');
+                        return 0;
+                    }
+                    return newCount;
+                });
+                // Timeout after 30 minutes
+                if (Date.now() - pollStartTime > 30 * 60 * 1000) {
+                    setLoading(false);
+                    setError('处理超时，请重试');
+                    return true;
+                }
                 return false;
             }
         };
@@ -64,6 +82,7 @@ const Extractor: React.FC = () => {
         }, 1000);
 
         return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [taskId, loading]);
 
     const fetchAvailableFormats = async (sourceFormat: string) => {
@@ -126,6 +145,20 @@ const Extractor: React.FC = () => {
             setLoading(false);
             setError(err.response?.data?.detail || '提取失败');
         }
+    };
+
+    const handleCancel = async () => {
+        if (!taskId) return;
+        setCancelling(true);
+        try {
+            await axios.post(`${API_BASE_URL}/api/cancel/${taskId}`);
+            setLoading(false);
+            setError('任务已取消');
+            setCurrentStep(1);
+        } catch (err) {
+            console.error('Cancel failed:', err);
+        }
+        setCancelling(false);
     };
 
     return (
@@ -201,6 +234,9 @@ const Extractor: React.FC = () => {
                                     />
                                 </div>
                                 <p>{progress}% 完成</p>
+                                <button className="action-button secondary" onClick={handleCancel} disabled={cancelling}>
+                                    {cancelling ? '取消中...' : '取消任务'}
+                                </button>
                             </div>
                         ) : downloadUrl ? (
                             <div className="success-state">
@@ -226,6 +262,8 @@ const Extractor: React.FC = () => {
                                         setCurrentStep(0);
                                         setMusicFile(null);
                                         setDownloadUrl(null);
+                                        setTaskId(null);
+                                        // Don't reset outputFormat
                                     }}
                                 >
                                     提取另一个

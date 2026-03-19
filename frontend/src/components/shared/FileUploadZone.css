@@ -47,3 +47,16 @@
   font-size: 0.8rem;
   color: var(--text-tertiary);
 }
+
+.file-size-error {
+  color: var(--error);
+  font-size: 0.82rem;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: rgba(239,68,68,0.06);
+  border-radius: var(--radius-sm);
+}
+
+@media (max-width: 768px) {
+  .file-upload-zone { min-height: 150px; padding: 24px 16px; }
+}

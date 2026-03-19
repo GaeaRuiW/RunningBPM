@@ -129,3 +129,8 @@
 @keyframes runner-run { 0% { left: -40px; } 100% { left: calc(100% + 40px); } }
 @keyframes runner-bob { from { transform: translateY(0); } to { transform: translateY(-5px); } }
 @media (prefers-color-scheme: dark) { .runner-wrap { color: #E2E8F0; } }
+
+@media (max-width: 768px) {
+  .running-scene { height: 150px; }
+  .running-scene.compact { height: 100px; }
+}

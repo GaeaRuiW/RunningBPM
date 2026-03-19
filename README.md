@@ -1,238 +1,202 @@
-# RunningBPM - 跑步音乐制作工具
+<div align="center">
 
-一个开源项目，用于为跑步爱好者制作带节拍器的音乐。
+# RunningBPM
 
-## 功能特性
+**跑步音乐制作工具 — 让每一步都踩在节拍上**
 
-1. **音频合成**：用户上传节拍器音频和音乐音频（支持批量上传多个音乐文件），输入想要的步频，自动批量合成带节拍器的音乐
-2. **节拍器提取**：从带有节拍器的音乐中自动提取出节拍器
-3. **多音乐拼接**：一次上传多个音乐，设置目标时长，将多个音乐拼接成带节拍器的长音乐
-4. **格式自定义**：支持多种音频格式（MP3, WAV, FLAC, M4A, OGG），智能格式降级（只能降级或同级，不能升级）
-5. **实时进度显示**：处理过程中实时显示进度条和状态信息
-6. **批量下载**：支持批量生成和下载多个文件
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Python 3.13+](https://img.shields.io/badge/Python-3.13+-blue.svg)](https://python.org)
+[![React 18](https://img.shields.io/badge/React-18-61dafb.svg)](https://reactjs.org)
+[![Docker](https://img.shields.io/badge/Docker-ready-2496ed.svg)](docker-compose.yml)
 
-## 技术栈
+一个开源的跑步音乐制作工具，支持音频合成、节拍器提取和多曲目拼接。
+上传你的音乐，设置目标 BPM，一键生成专属跑步歌单。
 
-- **后端**：FastAPI (Python)
-- **前端**：React + TypeScript
-- **音频处理**：pydub, librosa, numpy, scipy
+[快速开始](#-快速开始) · [功能特性](#-功能特性) · [部署指南](#-部署指南) · [API 文档](#-api-接口) · [贡献](#-贡献)
 
-## 项目结构
+</div>
 
-```
-RunningBPM/
-├── backend/                  # FastAPI 后端
-│   ├── main.py              # 主应用入口
-│   ├── services/            # 业务逻辑服务
-│   │   ├── audio_service.py     # 音频处理服务
-│   │   ├── format_service.py    # 格式检测与转换
-│   │   └── progress_service.py  # 任务进度管理
-│   ├── pyproject.toml       # Python 项目配置 (uv)
-│   ├── requirements.txt     # Python 依赖
-│   └── Dockerfile           # 后端容器
-├── frontend/                # React 前端
-│   ├── src/
-│   │   ├── pages/           # 页面组件
-│   │   │   ├── Dashboard.tsx    # 首页仪表盘
-│   │   │   ├── Mixer.tsx        # 音频合成页面
-│   │   │   ├── Extractor.tsx    # 节拍器提取页面
-│   │   │   └── Stitcher.tsx     # 音乐拼接页面
-│   │   ├── components/      # 共享组件
-│   │   ├── App.tsx          # 路由配置
-│   │   └── index.tsx        # 入口文件
-│   ├── public/              # 静态资源
-│   ├── nginx.conf           # Nginx 反向代理配置
-│   ├── package.json         # Node.js 依赖
-│   └── Dockerfile           # 前端容器
-├── .github/                 # GitHub 配置
-│   ├── workflows/ci.yml     # CI/CD 流水线
-│   ├── ISSUE_TEMPLATE/      # Issue 模板
-│   ├── PULL_REQUEST_TEMPLATE.md
-│   └── SECURITY.md          # 安全政策
-├── docker-compose.yml       # Docker 编排
-├── CODE_OF_CONDUCT.md       # 行为准则
-├── CONTRIBUTING.md          # 贡献指南
-├── CHANGELOG.md             # 更新日志
-├── LICENSE                  # MIT 许可证
-└── README.md
-```
+---
 
-## 快速开始
+## ✨ 功能特性
 
-### 方式一：使用 Docker（推荐）
+### 核心功能
 
-1. 使用 docker-compose 一键启动：
+| 功能 | 说明 |
+|------|------|
+| **音频合成** | 上传节拍器 + 音乐，指定 BPM，自动合成跑步音乐。支持批量处理多个文件 |
+| **节拍器提取** | 从已有跑步音乐中，通过 AI（Demucs）自动分离提取节拍器音轨 |
+| **音乐拼接** | 多首曲目拼接为指定时长的连续音乐，支持文件排序 |
+
+### 体验特性
+
+- **实时进度** — 跑者动画 + 进度条，处理过程一目了然
+- **任务取消** — 长时间处理可随时取消，释放资源
+- **文件管理** — 上传列表支持删除单个文件；拼接页支持调整顺序
+- **格式智能降级** — 支持 MP3、WAV、FLAC、M4A、OGG，只允许同级或降级转换
+- **批量下载** — 多文件一键打包 ZIP 下载
+- **移动端适配** — 响应式布局，手机平板均可使用
+- **亮/暗色主题** — 跟随系统自动切换
+
+### 后端特性
+
+- **自动清理** — 上传文件和输出文件定时清理，不占磁盘
+- **速率限制** — 防止恶意请求，保护服务器资源
+- **并发控制** — 可配置最大并发数，合理分配 CPU
+- **安全防护** — 文件名过滤、路径校验、安全头、CORS 环境变量化
+- **健康检查** — `/api/health` 端点，容器编排自动探活
+- **结构化日志** — 方便排查问题和监控运行状态
+
+## 🛠 技术栈
+
+| 层 | 技术 |
+|----|------|
+| **前端** | React 18 + TypeScript + Framer Motion |
+| **后端** | FastAPI + Gunicorn + Uvicorn |
+| **音频处理** | Demucs (AI 分离) + librosa + pydub + scipy |
+| **容器化** | Docker + Docker Compose + Nginx |
+| **代码质量** | Black + Flake8 + pre-commit hooks |
+
+## 🚀 快速开始
+
+### 一键 Docker 部署（推荐）
+
 ```bash
+git clone https://github.com/yourusername/RunningBPM.git
+cd RunningBPM
 docker-compose up -d
 ```
 
-2. 访问应用：
-- 前端：http://localhost:3000
-- 后端 API：http://localhost:8000
-- API 文档：http://localhost:8000/docs
+打开浏览器访问 **http://localhost:3000** 即可使用。
 
-### 方式二：本地开发
+> 首次启动需要下载 AI 模型（约 1GB），请耐心等待。
+
+### 本地开发
 
 #### 环境要求
 
-- Python 3.13+
-- uv（Python 包管理器，会自动安装）
-- Node.js 16+
-- npm 或 yarn
-- FFmpeg（用于音频处理）
+- Python 3.13+ + [uv](https://github.com/astral-sh/uv)
+- Node.js 18+ + npm
+- FFmpeg
 
-#### 后端启动
+#### 后端
 
-1. 安装 uv（如果尚未安装）：
-```bash
-pip install uv
-```
-
-2. 进入后端目录并同步依赖：
 ```bash
 cd backend
+cp .env.example .env    # 按需修改配置
 uv sync
+uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-3. 启动 FastAPI 服务器：
-```bash
-uv run uvicorn main:app --reload
-```
+#### 前端
 
-或者使用启动脚本：
-```bash
-./start_backend.sh
-```
-
-后端将在 `http://localhost:8000` 运行
-
-#### 前端启动
-
-1. 进入前端目录并安装依赖：
 ```bash
 cd frontend
+cp .env.example .env    # 配置 API 地址
 npm install
-```
-
-2. 启动 React 开发服务器：
-```bash
 npm start
 ```
 
-前端将在 `http://localhost:3000` 运行
+前端 http://localhost:3000 · 后端 http://localhost:8000 · API 文档 http://localhost:8000/docs
 
-## API 接口说明
+## 📐 项目结构
 
-### 1. 音频合成（支持批量处理）
-- **端点**：`POST /api/combine`
-- **参数**：
-  - `metronome`: 节拍器音频文件
-  - `music_files`: 音乐音频文件列表（支持多个）
-  - `target_bpm`: 目标步频（整数）
-  - `output_format`: 输出格式（默认 mp3）
-  - `auto_extract_metronome`: 是否自动提取节拍器（布尔值，默认 false）
-  - `metronome_volume`: 节拍器音量调整（dB，默认 0，范围 -20 到 +20）
-  - `max_concurrent`: 最大并发处理数（默认 4，范围 1 到 CPU 核心数）
-- **返回**：包含 `task_id` 和 `files` 数组的 JSON（每个文件包含 `download_url` 和 `filename`）
+```
+RunningBPM/
+├── backend/
+│   ├── main.py                 # FastAPI 应用 (路由、中间件、安全)
+│   ├── services/
+│   │   ├── audio_service.py    # 音频处理核心 (Demucs AI 分离)
+│   │   ├── format_service.py   # 格式检测与降级转换
+│   │   └── progress_service.py # 任务进度管理 (线程安全)
+│   ├── .env.example            # 环境变量模板
+│   ├── Dockerfile              # Gunicorn 多 worker 部署
+│   └── requirements.txt
+├── frontend/
+│   ├── src/
+│   │   ├── config.ts           # API 地址集中配置
+│   │   ├── pages/              # 页面: 首页、合成、拼接、提取
+│   │   └── components/         # 组件: 跑步场景动画、向导、上传区
+│   ├── nginx.conf              # 反向代理 + 安全头 + gzip
+│   ├── .env.example            # 环境变量模板
+│   └── Dockerfile
+├── docker-compose.yml          # 一键编排 (资源限制 + 健康检查)
+├── CODE_OF_CONDUCT.md
+├── CONTRIBUTING.md
+├── CHANGELOG.md
+├── LICENSE                     # MIT
+└── README.md
+```
 
-### 2. 节拍器提取
-- **端点**：`POST /api/extract`
-- **参数**：
-  - `music`: 带节拍器的音乐文件
-  - `output_format`: 输出格式（默认 mp3）
-- **返回**：包含 `task_id` 和 `download_url` 的 JSON
+## ⚙️ 部署指南
 
-### 3. 音乐拼接
-- **端点**：`POST /api/concatenate`
-- **参数**：
-  - `music_files`: 多个音乐文件（数组）
-  - `target_duration`: 目标总时长（秒，浮点数）
-  - `output_format`: 输出格式（默认 mp3）
-- **返回**：包含 `task_id` 和 `download_url` 的 JSON
+### 环境变量
 
-### 4. 获取可用格式
-- **端点**：`GET /api/formats/{source_format}`
-- **返回**：可用的输出格式列表
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `ALLOWED_ORIGINS` | `http://localhost:3000` | CORS 允许的源 (逗号分隔) |
+| `MAX_FILE_SIZE` | `524288000` | 单文件大小上限 (字节, 默认 500MB) |
+| `CLEANUP_INTERVAL_HOURS` | `1` | 文件清理间隔 (小时) |
+| `CLEANUP_MAX_AGE_HOURS` | `24` | 文件最大保留时间 (小时) |
+| `MAX_GLOBAL_TASKS` | `10` | 全局最大并发任务数 |
+| `REACT_APP_API_URL` | _(空)_ | 前端 API 地址 (Docker 部署留空) |
 
-### 5. 获取服务器信息
-- **端点**：`GET /api/server-info`
-- **返回**：服务器 CPU 核心数和默认最大并发数
+### Docker 资源建议
 
-### 6. 获取进度
-- **端点**：`GET /api/progress/{task_id}`
-- **返回**：任务进度信息（进度百分比、状态、消息）
+| 服务 | 最低内存 | 建议内存 | 说明 |
+|------|----------|----------|------|
+| backend | 1 GB | 4 GB | Demucs AI 模型需要较多内存 |
+| frontend | 64 MB | 128 MB | Nginx 静态资源服务 |
 
-### 7. WebSocket 进度更新
-- **端点**：`WS /ws/progress/{task_id}`
-- **返回**：实时进度更新（JSON）
+### 生产部署清单
 
-### 8. 文件下载
-- **端点**：`GET /api/download/{filename}`
-- **返回**：处理后的音频文件
+- [ ] 修改 `ALLOWED_ORIGINS` 为你的域名
+- [ ] 配置 Nginx HTTPS (Let's Encrypt)
+- [ ] 调整 `docker-compose.yml` 中的端口映射
+- [ ] 根据服务器配置调整内存限制
+- [ ] 确保有足够磁盘空间存放临时音频文件
 
-### 9. 批量下载
-- **端点**：`POST /api/batch-download`
-- **参数**：
-  - `filenames`: 文件名列表（数组）
-- **返回**：ZIP 压缩包
+## 📡 API 接口
 
-## 使用说明
+所有接口以 `/api` 为前缀。完整文档访问 `/docs` (Swagger UI)。
 
-1. **音频合成**：
-   - 上传节拍器音频和音乐音频（支持同时上传多个音乐文件进行批量处理）
-   - 如果上传的"节拍器"文件是带节拍器的完整音乐，可以勾选"自动提取节拍器"选项
-   - 输入目标步频（BPM），建议范围 120-200
-   - 选择输出格式（根据源文件格式自动限制可选格式）
-   - 系统会自动提取节拍器（如果启用）并调整节拍器速度，然后与每个音乐文件合成
-   - 支持批量下载所有生成的文件
-   - 实时显示处理进度
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| `POST` | `/api/combine` | 音频合成 (支持批量) |
+| `POST` | `/api/extract` | 节拍器提取 |
+| `POST` | `/api/concatenate` | 音乐拼接 |
+| `GET` | `/api/progress/{task_id}` | 查询任务进度 |
+| `POST` | `/api/cancel/{task_id}` | 取消任务 |
+| `GET` | `/api/download/{filename}` | 下载文件 |
+| `POST` | `/api/batch-download` | 批量下载 (ZIP) |
+| `GET` | `/api/formats/{format}` | 查询可用格式 |
+| `GET` | `/api/server-info` | 服务器信息 |
+| `GET` | `/api/health` | 健康检查 |
+| `WS` | `/ws/progress/{task_id}` | WebSocket 进度推送 |
 
-2. **节拍器提取**：
-   - 上传带有节拍器的音乐文件
-   - 选择输出格式
-   - 系统会使用频谱分析提取节拍器信号
-   - 实时显示处理进度
+## 🗺 路线图
 
-3. **音乐拼接**：
-   - 选择多个音乐文件（可多选）
-   - 设置目标时长（秒）
-   - 选择输出格式
-   - 系统会循环拼接音乐直到达到目标时长
-   - 支持批量下载多个生成的文件
-
-## 注意事项
-
-- **支持的音频格式**：MP3, WAV, FLAC, M4A, OGG 等常见格式
-- **格式转换规则**：
-  - 只能从高质量格式转换为低质量或同级格式
-  - 例如：FLAC → MP3/WAV/FLAC ✅，MP3 → FLAC ❌
-  - 系统会自动检测源文件格式并限制可选输出格式
-- **处理时间**：处理大文件可能需要一些时间，请耐心等待
-- **文件存储**：
-  - 上传的文件会临时保存在 `backend/uploads/` 目录
-  - 处理后的文件保存在 `backend/outputs/` 目录
-- **进度跟踪**：使用任务ID可以查询处理进度，支持轮询和WebSocket两种方式
-
-## 开发计划
-
-- [x] 项目基础结构
-- [x] 音频合成功能
-- [x] 节拍器提取功能
-- [x] 多音乐拼接功能
-- [x] 前端界面开发
-- [x] 音频格式自定义
-- [x] 进度条显示
-- [x] 批量下载功能
-- [x] Docker 支持
-- [ ] 音频预览功能
+- [x] 音频合成 + 批量处理
+- [x] AI 节拍器提取 (Demucs)
+- [x] 多音乐拼接
+- [x] 实时进度 + 任务取消
+- [x] 文件管理 (删除/排序)
+- [x] 移动端响应式
+- [x] Docker 一键部署
+- [x] 速率限制 + 安全防护
+- [x] 自动文件清理
+- [ ] 上传后音频预览试听
+- [ ] BPM 自动检测
+- [ ] 拼接淡入淡出过渡
+- [ ] 处理历史记录
 - [ ] 用户账户系统
-- [ ] 云端存储集成
 
-## 贡献
+## 🤝 贡献
 
-欢迎提交 Issue 和 Pull Request！请阅读 [贡献指南](CONTRIBUTING.md) 和 [行为准则](CODE_OF_CONDUCT.md)。
+欢迎提交 Issue 和 Pull Request！
 
-## 许可证
+请阅读 [贡献指南](CONTRIBUTING.md) 和 [行为准则](CODE_OF_CONDUCT.md)。
 
-MIT License
+## 📄 许可证
 
+[MIT License](LICENSE) - 自由使用、修改和分发。
