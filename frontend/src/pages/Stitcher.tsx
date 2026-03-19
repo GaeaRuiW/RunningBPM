@@ -13,6 +13,7 @@ const Stitcher: React.FC = () => {
     const [targetDuration, setTargetDuration] = useState<number>(1800);
     const [outputFormat, setOutputFormat] = useState<string>('mp3');
     const [availableFormats, setAvailableFormats] = useState<string[]>(['mp3']);
+    const [crossfade, setCrossfade] = useState(0);
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -24,6 +25,9 @@ const Stitcher: React.FC = () => {
     const [, setPollErrors] = useState(0);
     const [pollStartTime] = useState<number>(Date.now());
     const [cancelling, setCancelling] = useState(false);
+
+    // Audio preview URLs
+    const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
 
     useEffect(() => {
         if (musicFiles.length > 0) {
@@ -41,6 +45,20 @@ const Stitcher: React.FC = () => {
         }
     }, [musicFiles]);
 
+    // After musicFiles change, update preview URLs
+    useEffect(() => {
+        const urls: Record<string, string> = {};
+        musicFiles.forEach(f => {
+            if (!previewUrls[f.name]) {
+                urls[f.name] = URL.createObjectURL(f);
+            } else {
+                urls[f.name] = previewUrls[f.name];
+            }
+        });
+        setPreviewUrls(urls);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [musicFiles]);
+
     useEffect(() => {
         if (!taskId || !loading) return;
 
@@ -56,6 +74,22 @@ const Stitcher: React.FC = () => {
                     if (response.data.result) {
                         setDownloadUrl(`${API_BASE_URL}${response.data.result.download_url}`);
                         setFilename(response.data.result.filename);
+
+                        // Save to history
+                        try {
+                            const hist = JSON.parse(localStorage.getItem('runningbpm_history') || '[]');
+                            hist.unshift({
+                                id: taskId,
+                                type: 'concatenate',
+                                timestamp: Date.now(),
+                                inputFiles: musicFiles.map(f => f.name),
+                                resultFiles: [{
+                                    filename: response.data.result.filename,
+                                    downloadUrl: `${API_BASE_URL}${response.data.result.download_url}`
+                                }]
+                            });
+                            localStorage.setItem('runningbpm_history', JSON.stringify(hist.slice(0, 20)));
+                        } catch {}
                     }
                     return true;
                 } else if (response.data.status === 'failed') {
@@ -161,6 +195,7 @@ const Stitcher: React.FC = () => {
             musicFiles.forEach(file => formData.append('music_files', file));
             formData.append('target_duration', targetDuration.toString());
             formData.append('output_format', outputFormat);
+            formData.append('crossfade_ms', (crossfade * 1000).toString());
 
             const response = await axios.post(`${API_BASE_URL}/api/concatenate`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
@@ -220,6 +255,12 @@ const Stitcher: React.FC = () => {
                                 <div className="file-list-preview">
                                     {musicFiles.map((f, i) => (
                                         <div key={i} className="file-preview-item">
+                                            {previewUrls[f.name] && (
+                                                <button className="file-action-btn" onClick={() => {
+                                                    const a = new Audio(previewUrls[f.name]);
+                                                    a.play();
+                                                }} title="试听">&#9654;</button>
+                                            )}
                                             <span className="file-number">{i + 1}.</span>
                                             <span className="file-name">{f.name}</span>
                                             <div className="file-actions">
@@ -279,6 +320,14 @@ const Stitcher: React.FC = () => {
                                     ))}
                                 </select>
                             </div>
+
+                            <div className="setting-card full-width">
+                                <label>淡入淡出 ({crossfade} 秒)</label>
+                                <input type="range" min="0" max="10" value={crossfade}
+                                    onChange={e => setCrossfade(parseInt(e.target.value))} />
+                                <div className="range-labels"><span>无</span><span>5秒</span><span>10秒</span></div>
+                                <small>相邻曲目之间的平滑过渡时长</small>
+                            </div>
                         </div>
 
                         <div className="wizard-actions">
@@ -337,7 +386,7 @@ const Stitcher: React.FC = () => {
                                         setMusicFiles([]);
                                         setDownloadUrl(null);
                                         setTaskId(null);
-                                        // Don't reset targetDuration, outputFormat
+                                        // Don't reset targetDuration, outputFormat, crossfade
                                     }}
                                 >
                                     开始新的拼接

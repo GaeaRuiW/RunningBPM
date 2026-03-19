@@ -1,0 +1,60 @@
+.pace-calc {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+}
+.pace-calc h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 14px;
+}
+.pace-input-row { margin-bottom: 12px; }
+.pace-input-row label { font-size: 0.82rem; margin-bottom: 6px; }
+.pace-inputs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.pace-inputs input {
+  width: 60px;
+  text-align: center;
+}
+.pace-inputs span {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+}
+.pace-result {
+  font-size: 1rem;
+  color: var(--text-primary);
+  margin-bottom: 14px;
+  padding: 10px;
+  background: var(--accent-light);
+  border-radius: var(--radius-sm);
+}
+.pace-result strong {
+  color: var(--accent);
+  font-size: 1.3rem;
+}
+.pace-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.pace-preset-btn {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: var(--font-sans);
+}
+.pace-preset-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}

@@ -49,7 +49,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg-page: #0B1121;
     --bg-surface: #141E30;
     --bg-elevated: #1B2840;
@@ -72,6 +72,31 @@
     --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.4);
     --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.5);
   }
+}
+
+/* 手动暗色模式 */
+:root[data-theme="dark"] {
+    --bg-page: #0B1121;
+    --bg-surface: #141E30;
+    --bg-elevated: #1B2840;
+    --bg-input: #1B2840;
+    --bg-sidebar: #080E1A;
+    --bg-sidebar-hover: #111B2E;
+    --bg-sidebar-active: rgba(5, 150, 105, 0.18);
+
+    --text-primary: #F1F5F9;
+    --text-secondary: #94A3B8;
+    --text-tertiary: #64748B;
+
+    --border: #1E2D42;
+    --border-strong: #2A3F5A;
+
+    --accent-light: rgba(5, 150, 105, 0.18);
+    --accent-warm-light: rgba(217, 119, 6, 0.15);
+
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.5);
 }
 
 /* 全局重置 */

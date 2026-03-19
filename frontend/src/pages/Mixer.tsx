@@ -34,6 +34,13 @@ const Mixer: React.FC = () => {
     const [pollStartTime] = useState<number>(Date.now());
     const [cancelling, setCancelling] = useState(false);
 
+    // BPM detection state
+    const [detectedBPMs, setDetectedBPMs] = useState<Record<string, number>>({});
+    const [detectingBPM, setDetectingBPM] = useState<string | null>(null);
+
+    // Audio preview URLs
+    const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
+
     useEffect(() => {
         const fetchServerInfo = async () => {
             try {
@@ -52,6 +59,20 @@ const Mixer: React.FC = () => {
             const fileExt = musicFiles[0].name.split('.').pop()?.toLowerCase() || 'mp3';
             fetchAvailableFormats(fileExt);
         }
+    }, [musicFiles]);
+
+    // After musicFiles change, update preview URLs
+    useEffect(() => {
+        const urls: Record<string, string> = {};
+        musicFiles.forEach(f => {
+            if (!previewUrls[f.name]) {
+                urls[f.name] = URL.createObjectURL(f);
+            } else {
+                urls[f.name] = previewUrls[f.name];
+            }
+        });
+        setPreviewUrls(urls);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [musicFiles]);
 
     useEffect(() => {
@@ -77,6 +98,19 @@ const Mixer: React.FC = () => {
                                 filename: response.data.result.filename
                             }];
                         setOutputFiles(files);
+
+                        // Save to history
+                        try {
+                            const hist = JSON.parse(localStorage.getItem('runningbpm_history') || '[]');
+                            hist.unshift({
+                                id: taskId,
+                                type: 'combine',
+                                timestamp: Date.now(),
+                                inputFiles: musicFiles.map(f => f.name),
+                                resultFiles: files
+                            });
+                            localStorage.setItem('runningbpm_history', JSON.stringify(hist.slice(0, 20)));
+                        } catch {}
                     }
                     return true;
                 } else if (response.data.status === 'failed') {
@@ -140,6 +174,19 @@ const Mixer: React.FC = () => {
 
     const handleRemoveMusic = (index: number) => {
         setMusicFiles(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const handleDetectBPM = async (file: File) => {
+        setDetectingBPM(file.name);
+        try {
+            const formData = new FormData();
+            formData.append('music', file);
+            const response = await axios.post(`${API_BASE_URL}/api/detect-bpm`, formData);
+            setDetectedBPMs(prev => ({ ...prev, [file.name]: response.data.bpm }));
+        } catch (err) {
+            console.error('BPM detection failed:', err);
+        }
+        setDetectingBPM(null);
     };
 
     const handleNext = () => {
@@ -256,7 +303,21 @@ const Mixer: React.FC = () => {
                                     <div className="file-list-preview">
                                         {musicFiles.map((f, i) => (
                                             <div key={i} className="file-preview-item">
+                                                {previewUrls[f.name] && (
+                                                    <button className="file-action-btn" onClick={() => {
+                                                        const a = new Audio(previewUrls[f.name]);
+                                                        a.play();
+                                                    }} title="试听">&#9654;</button>
+                                                )}
                                                 <span className="file-name">{f.name}</span>
+                                                {detectedBPMs[f.name] ? (
+                                                    <span className="bpm-badge">{detectedBPMs[f.name]} BPM</span>
+                                                ) : (
+                                                    <button className="file-action-btn" onClick={() => handleDetectBPM(f)}
+                                                        disabled={detectingBPM === f.name}>
+                                                        {detectingBPM === f.name ? '...' : 'BPM'}
+                                                    </button>
+                                                )}
                                                 <button className="file-remove-btn" onClick={() => handleRemoveMusic(i)} title="移除">&times;</button>
                                             </div>
                                         ))}
@@ -300,6 +361,12 @@ const Mixer: React.FC = () => {
                                         onChange={(e) => setTargetBPM(parseInt(e.target.value) || 180)}
                                     />
                                     <span>BPM</span>
+                                </div>
+                                <div className="bpm-presets">
+                                    {[{l:'散步',v:100},{l:'慢跑',v:140},{l:'跑步',v:170},{l:'冲刺',v:190}].map(p => (
+                                        <button key={p.v} type="button" className="bpm-preset-btn"
+                                            onClick={() => setTargetBPM(p.v)}>{p.l} {p.v}</button>
+                                    ))}
                                 </div>
                                 <small>建议范围: 120-200 BPM</small>
                                 {(targetBPM < 60 || targetBPM > 300) && (

@@ -1,10 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import './Layout.css';
 
 const MainLayout: React.FC = () => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
+
+    const [theme, setTheme] = useState<'auto' | 'light' | 'dark'>(() => {
+        return (localStorage.getItem('runningbpm_theme') as any) || 'auto';
+    });
+
+    useEffect(() => {
+        if (theme === 'auto') {
+            document.documentElement.removeAttribute('data-theme');
+        } else {
+            document.documentElement.setAttribute('data-theme', theme);
+        }
+        localStorage.setItem('runningbpm_theme', theme);
+    }, [theme]);
+
+    const cycleTheme = () => {
+        setTheme(prev => prev === 'auto' ? 'light' : prev === 'light' ? 'dark' : 'auto');
+    };
+    const themeLabel = theme === 'auto' ? '自动' : theme === 'light' ? '亮色' : '暗色';
 
     return (
         <div className="layout-container">
@@ -27,6 +45,11 @@ const MainLayout: React.FC = () => {
                     <NavLink to="/extractor" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setSidebarOpen(false)}>
                         节拍器提取
                     </NavLink>
+                </div>
+                <div className="sidebar-footer">
+                    <button className="theme-toggle" onClick={cycleTheme}>
+                        {themeLabel}
+                    </button>
                 </div>
             </nav>
             <main className="content-area">

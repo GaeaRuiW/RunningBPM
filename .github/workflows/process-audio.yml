@@ -1,0 +1,130 @@
+name: "\u5904\u7406\u97f3\u9891 (Process Audio)"
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: "\u64cd\u4f5c\u7c7b\u578b"
+        required: true
+        type: choice
+        options:
+          - "combine"
+          - "extract"
+          - "concatenate"
+      audio_urls:
+        description: "\u97f3\u9891\u6587\u4ef6 URL (\u591a\u4e2a\u7528\u82f1\u6587\u9017\u53f7\u5206\u9694)"
+        required: true
+      metronome_url:
+        description: "\u8282\u62cd\u5668\u97f3\u9891 URL (\u4ec5\u5408\u6210\u65f6\u9700\u8981)"
+        required: false
+        default: ""
+      target_bpm:
+        description: "\u76ee\u6807 BPM (\u4ec5\u5408\u6210\u65f6\u9700\u8981)"
+        required: false
+        default: "170"
+      target_duration:
+        description: "\u76ee\u6807\u65f6\u957f/\u79d2 (\u4ec5\u62fc\u63a5\u65f6\u9700\u8981)"
+        required: false
+        default: "1800"
+      output_format:
+        description: "\u8f93\u51fa\u683c\u5f0f"
+        required: false
+        type: choice
+        default: "mp3"
+        options: ["mp3", "wav", "flac"]
+
+jobs:
+  process:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: "\u5b89\u88c5\u7cfb\u7edf\u4f9d\u8d56"
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg libsndfile1
+
+      - name: "\u5b89\u88c5 Python \u4f9d\u8d56"
+        run: cd backend && pip install -r requirements.txt
+
+      - name: "\u4e0b\u8f7d\u97f3\u9891\u6587\u4ef6"
+        run: |
+          mkdir -p /tmp/audio-input /tmp/audio-output
+          IFS=',' read -ra URLS <<< "${{ inputs.audio_urls }}"
+          idx=0
+          for url in "${URLS[@]}"; do
+            url=$(echo "$url" | xargs)
+            filename=$(basename "$url" | sed 's/[?#].*//')
+            [ -z "$filename" ] && filename="audio_${idx}.mp3"
+            echo "Downloading: $url -> $filename"
+            curl -L --fail -o "/tmp/audio-input/$filename" "$url"
+            idx=$((idx+1))
+          done
+          if [ -n "${{ inputs.metronome_url }}" ]; then
+            echo "Downloading metronome..."
+            curl -L --fail -o "/tmp/audio-input/_metronome_" "${{ inputs.metronome_url }}"
+          fi
+          echo "Downloaded files:"
+          ls -lh /tmp/audio-input/
+
+      - name: "\u5904\u7406\u97f3\u9891"
+        working-directory: backend
+        run: |
+          python3 << 'PYEOF'
+          import sys, os, glob
+          sys.path.insert(0, '.')
+          from services.audio_service import AudioService
+
+          svc = AudioService()
+          input_dir = '/tmp/audio-input'
+          output_dir = '/tmp/audio-output'
+          fmt = "${{ inputs.output_format }}"
+
+          all_files = sorted(glob.glob(f'{input_dir}/*'))
+          metronome = [f for f in all_files if os.path.basename(f) == '_metronome_']
+          music = [f for f in all_files if os.path.basename(f) != '_metronome_']
+
+          op = "${{ inputs.operation }}"
+          print(f"Operation: {op}, Files: {len(music)}, Format: {fmt}")
+
+          def progress(p, m):
+              print(f"  [{p}%] {m}")
+
+          if op == "combine":
+              metro = metronome[0] if metronome else music.pop(0)
+              bpm = int("${{ inputs.target_bpm }}")
+              for mf in music:
+                  name = os.path.splitext(os.path.basename(mf))[0]
+                  out = f'{output_dir}/{name}_{bpm}bpm.{fmt}'
+                  print(f"Combining: {os.path.basename(mf)} @ {bpm} BPM")
+                  svc.combine_audio(metro, mf, bpm, out, fmt, progress_callback=progress)
+                  print(f"  -> {out}")
+
+          elif op == "extract":
+              for mf in music:
+                  name = os.path.splitext(os.path.basename(mf))[0]
+                  out = f'{output_dir}/{name}_metronome.{fmt}'
+                  print(f"Extracting from: {os.path.basename(mf)}")
+                  svc.extract_metronome(mf, out, fmt, progress_callback=progress)
+                  print(f"  -> {out}")
+
+          elif op == "concatenate":
+              dur = float("${{ inputs.target_duration }}")
+              out = f'{output_dir}/concatenated.{fmt}'
+              print(f"Concatenating {len(music)} files, target {dur}s")
+              svc.concatenate_audio(music, dur, out, fmt, progress_callback=progress)
+              print(f"  -> {out}")
+
+          print("Done!")
+          PYEOF
+
+      - name: "\u4e0a\u4f20\u5904\u7406\u7ed3\u679c"
+        uses: actions/upload-artifact@v4
+        with:
+          name: processed-audio
+          path: /tmp/audio-output/
+          retention-days: 7
+          if-no-files-found: error

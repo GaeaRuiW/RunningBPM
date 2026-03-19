@@ -29,10 +29,14 @@ yarn-error.log*
 
 # React
 frontend/build/
+frontend/.env
 frontend/.env.local
 frontend/.env.development.local
 frontend/.env.test.local
 frontend/.env.production.local
+
+# Backend env
+backend/.env
 
 # IDE
 .vscode/

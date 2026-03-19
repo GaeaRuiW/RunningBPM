@@ -154,6 +154,29 @@ async def server_info():
     }
 
 
+@app.post("/api/detect-bpm")
+@limiter.limit("20/minute")
+async def detect_bpm(request: Request, music: UploadFile = File(...)):
+    """检测音频文件的 BPM"""
+    temp_path = UPLOAD_DIR / f"bpm_{uuid.uuid4()}_{sanitize_filename(music.filename)}"
+    try:
+        content = await music.read()
+        if len(content) > MAX_FILE_SIZE:
+            raise HTTPException(status_code=413, detail="文件太大")
+        with open(temp_path, "wb") as f:
+            f.write(content)
+        bpm = await run_in_threadpool(audio_service._detect_bpm, str(temp_path))
+        logger.info(f"BPM detected: {bpm:.1f} for {music.filename}")
+        return {"bpm": round(float(bpm), 1), "filename": music.filename}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"BPM detection failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        temp_path.unlink(missing_ok=True)
+
+
 @app.get("/api/formats/{source_format}")
 async def get_available_formats(source_format: str):
     """
@@ -577,10 +600,93 @@ async def extract_metronome(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/api/extract-batch")
+@limiter.limit("5/minute")
+async def extract_metronome_batch(
+    background_tasks: BackgroundTasks,
+    request: Request,
+    music_files: List[UploadFile] = File(...),
+    output_format: str = Form("mp3"),
+    task_id: Optional[str] = Form(None)
+):
+    """批量提取节拍器"""
+    try:
+        if not task_id:
+            task_id = progress_service.create_task()
+        else:
+            progress_service.create_task(task_id)
+
+        music_paths = []
+        for idx, music_file in enumerate(music_files):
+            music_id = str(uuid.uuid4())
+            music_path = UPLOAD_DIR / f"{music_id}_{sanitize_filename(music_file.filename)}"
+            content = await music_file.read()
+            if len(content) > MAX_FILE_SIZE:
+                raise HTTPException(status_code=413, detail=f"文件 {music_file.filename} 太大")
+            with open(music_path, "wb") as f:
+                f.write(content)
+            music_paths.append(str(music_path))
+
+        background_tasks.add_task(
+            process_extract_batch,
+            task_id, music_paths, output_format
+        )
+
+        return {"success": True, "task_id": task_id, "message": "批量提取任务已提交"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        if task_id:
+            progress_service.fail_task(task_id, str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+def process_extract_batch(task_id: str, music_paths: List[str], output_format: str):
+    """后台批量提取节拍器"""
+    try:
+        output_files = []
+        total = len(music_paths)
+        for idx, music_path in enumerate(music_paths):
+            if progress_service.is_cancelled(task_id):
+                return
+            progress_service.update_progress(
+                task_id,
+                int((idx / total) * 90),
+                f"正在提取 {idx + 1}/{total}..."
+            )
+            original_name = Path(music_path).stem[37:]  # Remove UUID prefix
+            output_filename = f"metronome_{original_name}.{output_format}"
+            output_path = OUTPUT_DIR / output_filename
+
+            def progress_callback(progress: int, message: str):
+                base = int((idx / total) * 90)
+                mapped = base + int((progress / 100) * (90 / total))
+                progress_service.update_progress(task_id, mapped, f"文件 {idx+1}/{total}: {message}")
+
+            audio_service.extract_metronome(
+                music_path=music_path,
+                output_path=str(output_path),
+                output_format=output_format,
+                progress_callback=progress_callback
+            )
+            output_files.append({
+                "download_url": f"/api/download/{output_filename}",
+                "filename": output_filename
+            })
+
+        progress_service.complete_task(task_id, {
+            "files": output_files,
+            "count": len(output_files)
+        })
+    except Exception as e:
+        logger.error(f"Batch extract failed: {e}", exc_info=True)
+        progress_service.fail_task(task_id, str(e))
+
+
 # ---------------------------------------------------------------------------
 # Concatenate audio (background worker)
 # ---------------------------------------------------------------------------
-def process_concatenate_audio(task_id: str, music_paths: List[str], target_duration: float, output_path: Path, output_format: str, output_filename: str):
+def process_concatenate_audio(task_id: str, music_paths: List[str], target_duration: float, output_path: Path, output_format: str, output_filename: str, crossfade_ms: int = 0):
     """后台处理音频拼接任务"""
     try:
         def progress_callback(progress: int, message: str):
@@ -591,6 +697,7 @@ def process_concatenate_audio(task_id: str, music_paths: List[str], target_durat
             target_duration=target_duration,
             output_path=str(output_path),
             output_format=output_format,
+            crossfade_ms=crossfade_ms,
             progress_callback=progress_callback
         )
 
@@ -611,6 +718,7 @@ async def concatenate_audio(
     music_files: List[UploadFile] = File(...),
     target_duration: float = Form(...),
     output_format: str = Form("mp3"),
+    crossfade_ms: int = Form(0),  # 淡入淡出时长(毫秒), 0-10000
     task_id: Optional[str] = Form(None)
 ):
     """
@@ -618,12 +726,14 @@ async def concatenate_audio(
     - music_files: 多个音乐文件
     - target_duration: 目标总时长（秒）
     - output_format: 输出格式（默认 mp3）
+    - crossfade_ms: 淡入淡出时长（毫秒），0-10000
     - task_id: 可选的任务ID，用于进度跟踪
     """
     try:
         # Parameter validation
         if not 60 <= target_duration <= 7200:
             raise HTTPException(status_code=400, detail="时长必须在 60-7200 秒之间")
+        crossfade_ms = max(0, min(10000, crossfade_ms))
 
         # 创建任务ID
         if not task_id:
@@ -677,7 +787,8 @@ async def concatenate_audio(
             target_duration,
             output_path,
             output_format,
-            output_filename
+            output_filename,
+            crossfade_ms
         )
 
         return {

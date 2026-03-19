@@ -1699,6 +1699,7 @@ class AudioService:
         target_duration: float,
         output_path: str,
         output_format: str = "mp3",
+        crossfade_ms: int = 0,
         progress_callback: Optional[Callable[[int, str], None]] = None
     ):
         """
@@ -1754,11 +1755,17 @@ class AudioService:
             
             if len(audio) <= remaining:
                 # 如果当前音乐完整长度不超过剩余时长，全部添加
-                combined += audio
+                if crossfade_ms > 0 and len(combined) > crossfade_ms:
+                    combined = combined.append(audio, crossfade=crossfade_ms)
+                else:
+                    combined += audio
                 current_duration += len(audio)
             else:
                 # 否则只添加需要的部分
-                combined += audio[:int(remaining)]
+                if crossfade_ms > 0 and len(combined) > crossfade_ms:
+                    combined = combined.append(audio[:int(remaining)], crossfade=crossfade_ms)
+                else:
+                    combined += audio[:int(remaining)]
                 current_duration = target_duration_ms
             
             music_index += 1
