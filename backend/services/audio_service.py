@@ -373,7 +373,6 @@ class AudioService:
             progress_callback(36, "节拍提取完成，准备合成...")
         
         # 使用辅助方法生成节拍器轨道
-        # 使用辅助方法生成节拍器轨道
         metronome_track = self._generate_metronome_track(
             beat_audio=single_beat,
             target_bpm=target_bpm,
@@ -440,7 +439,7 @@ class AudioService:
                 if os.path.exists(temp_file):
                     try:
                         os.remove(temp_file)
-                    except:
+                    except Exception:
                         pass
             
             if progress_callback:
@@ -460,6 +459,7 @@ class AudioService:
                 os.remove(temp_metronome_path)
             
             if progress_callback:
+                processed_beats = int(len(music_audio) / (60000 / target_bpm))
                 progress_callback(100, f"完成！共放置 {processed_beats} 个节拍（使用简单混合）")
 
     
@@ -1001,6 +1001,7 @@ class AudioService:
                     continue
                 
                 # 检查检测到的节拍是否均匀分布
+                beat_intervals = []
                 if len(detected_beats) >= 3:
                     beat_intervals = [detected_beats[i] - detected_beats[i-1] for i in range(1, len(detected_beats))]
                     interval_mean = np.mean(beat_intervals)
@@ -1053,7 +1054,7 @@ class AudioService:
                     
                     # 计算节拍均匀性得分（如果有detected_beats）
                     beat_uniformity = 0
-                    if 'beat_intervals' in locals() and len(beat_intervals) > 0:
+                    if len(beat_intervals) > 0:
                         beat_uniformity = 1.0 - min(interval_cv, 1.0)  # 间隔越均匀，得分越高
                     
                     # 综合分数：自相关峰值强度 + 周期稳定性 + 贯穿整个音频 + 节拍均匀性
@@ -1092,7 +1093,8 @@ class AudioService:
             else:
                 if progress_callback:
                     progress_callback(22, f"✓ 检测到符合条件的节拍器（{bpm:.0f} BPM，得分: {best_period_score:.2f}）...")
-            # 3. 如果找到了周期性，基于周期提取节拍
+        beat_start = 0
+        beat_end = 0
         if best_period is not None and best_period > 0:
             
             # 使用检测到的周期，找到第一个完整的节拍
@@ -1111,7 +1113,7 @@ class AudioService:
                     delta=0.1,
                     wait=8
                 )
-            except:
+            except Exception:
                 onset_frames = []
             
             # 如果检测到onset点，验证它们是否符合检测到的周期
@@ -1297,7 +1299,7 @@ class AudioService:
                     delta=0.12,
                     wait=12
                 )
-            except:
+            except Exception:
                 onset_frames = []
             
             if len(onset_frames) >= 2:
@@ -1375,7 +1377,7 @@ class AudioService:
                 y=y, sr=sr, units='frames', hop_length=hop_length,
                 backtrack=True, delta=0.1, wait=8
             )
-        except:
+        except Exception:
             all_onset_frames = []
         
         if len(all_onset_frames) >= 3:
@@ -1793,7 +1795,7 @@ class AudioService:
             y, sr = librosa.load(audio_path, sr=self.sample_rate)
             tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
             return float(tempo)
-        except:
+        except Exception:
             return 0.0
     
     def _adjust_speed(self, audio: AudioSegment, speed_ratio: float) -> AudioSegment:

@@ -6,8 +6,6 @@ import threading
 import uuid
 import zipfile
 import asyncio
-import aiofiles
-import json
 import shutil
 import multiprocessing
 from datetime import datetime
@@ -15,9 +13,9 @@ from typing import List, Optional
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from fastapi import FastAPI, File, UploadFile, Form, HTTPException, BackgroundTasks, Body, Request
+from fastapi import FastAPI, File, UploadFile, Form, HTTPException, BackgroundTasks, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse
 from fastapi.websockets import WebSocket, WebSocketDisconnect
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel
@@ -118,7 +116,7 @@ def cleanup_worker():
             if cleaned:
                 logger.info(f"Cleaned {cleaned} old task records")
         except Exception as e:
-            logger.error(f"Cleanup error: {e}")
+            logger.error(f"Cleanup error: {e}", exc_info=True)
 
 
 @app.on_event("startup")
@@ -171,7 +169,7 @@ async def detect_bpm(request: Request, music: UploadFile = File(...)):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"BPM detection failed: {e}")
+        logger.error(f"BPM detection failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         temp_path.unlink(missing_ok=True)
@@ -636,6 +634,7 @@ async def extract_metronome_batch(
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"Batch extract endpoint error: {e}", exc_info=True)
         if task_id:
             progress_service.fail_task(task_id, str(e))
         raise HTTPException(status_code=500, detail=str(e))
@@ -892,6 +891,7 @@ async def batch_download(request: BatchDownloadRequest):
             media_type="application/zip"
         )
     except Exception as e:
+        logger.error(f"Batch download error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 

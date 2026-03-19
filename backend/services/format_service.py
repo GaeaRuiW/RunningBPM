@@ -1,9 +1,13 @@
 """
 音频格式检测和服务
 """
-from pydub import AudioSegment
-from typing import Dict, List, Optional
+import logging
 import os
+from typing import Dict, List, Optional
+
+from pydub import AudioSegment
+
+logger = logging.getLogger(__name__)
 
 
 # 音频格式质量等级（数字越大质量越高）
@@ -44,7 +48,8 @@ class FormatService:
             audio = AudioSegment.from_file(file_path)
             # pydub 的 format 属性可能不准确，优先使用扩展名
             return ext if ext else None
-        except:
+        except Exception as e:
+            logger.error(f"Failed to detect format for {file_path}: {e}", exc_info=True)
             return None
     
     @staticmethod
