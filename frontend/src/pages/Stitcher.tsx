@@ -11,7 +11,7 @@ const API_BASE_URL = 'http://localhost:8000';
 const Stitcher: React.FC = () => {
     const [currentStep, setCurrentStep] = useState(0);
     const [musicFiles, setMusicFiles] = useState<File[]>([]);
-    const [targetDuration, setTargetDuration] = useState<number>(1800); // Default 30 mins
+    const [targetDuration, setTargetDuration] = useState<number>(1800);
     const [outputFormat, setOutputFormat] = useState<string>('mp3');
     const [availableFormats, setAvailableFormats] = useState<string[]>(['mp3']);
 
@@ -23,8 +23,6 @@ const Stitcher: React.FC = () => {
     const [progress, setProgress] = useState<number>(0);
     const [progressMessage, setProgressMessage] = useState<string>('');
 
-
-    // Detect formats when files change
     useEffect(() => {
         if (musicFiles.length > 0) {
             const formats = musicFiles.map(f => f.name.split('.').pop()?.toLowerCase() || 'mp3');
@@ -41,7 +39,6 @@ const Stitcher: React.FC = () => {
         }
     }, [musicFiles]);
 
-    // Polling for progress
     useEffect(() => {
         if (!taskId || !loading) return;
 
@@ -56,7 +53,6 @@ const Stitcher: React.FC = () => {
                     if (response.data.result) {
                         setDownloadUrl(`${API_BASE_URL}${response.data.result.download_url}`);
                         setFilename(response.data.result.filename);
-
                     }
                     return true;
                 } else if (response.data.status === 'failed') {
@@ -181,7 +177,7 @@ const Stitcher: React.FC = () => {
 
                         <div className="wizard-actions">
                             <button className="action-button primary" onClick={handleNext}>
-                                下一步: 配置设置 →
+                                下一步: 配置设置
                             </button>
                         </div>
                     </div>
@@ -204,9 +200,9 @@ const Stitcher: React.FC = () => {
                                     <span>秒</span>
                                 </div>
                                 <div className="duration-preview">
-                                    ≈ {formatDuration(targetDuration)}
+                                    {formatDuration(targetDuration)}
                                 </div>
-                                <small>建议: 600-3600秒 (10-60 分钟)</small>
+                                <small>建议: 600-3600秒 (10-60分钟)</small>
                             </div>
 
                             <div className="setting-card">
@@ -224,7 +220,7 @@ const Stitcher: React.FC = () => {
 
                         <div className="wizard-actions">
                             <button className="action-button secondary" onClick={handleBack}>
-                                ← 返回
+                                返回
                             </button>
                             <button className="action-button primary" onClick={handleSubmit}>
                                 开始拼接

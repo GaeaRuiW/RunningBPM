@@ -22,7 +22,6 @@ const Extractor: React.FC = () => {
     const [progress, setProgress] = useState<number>(0);
     const [progressMessage, setProgressMessage] = useState<string>('');
 
-    // Detect formats when file changes
     useEffect(() => {
         if (musicFile) {
             const fileExt = musicFile.name.split('.').pop()?.toLowerCase() || 'mp3';
@@ -30,7 +29,6 @@ const Extractor: React.FC = () => {
         }
     }, [musicFile]);
 
-    // Polling for progress
     useEffect(() => {
         if (!taskId || !loading) return;
 
@@ -153,7 +151,7 @@ const Extractor: React.FC = () => {
 
                         <div className="wizard-actions">
                             <button className="action-button primary" onClick={handleNext}>
-                                下一步: 配置设置 →
+                                下一步: 配置设置
                             </button>
                         </div>
                     </div>
@@ -178,7 +176,7 @@ const Extractor: React.FC = () => {
 
                         <div className="wizard-actions">
                             <button className="action-button secondary" onClick={handleBack}>
-                                ← 返回
+                                返回
                             </button>
                             <button className="action-button primary" onClick={handleSubmit}>
                                 开始提取

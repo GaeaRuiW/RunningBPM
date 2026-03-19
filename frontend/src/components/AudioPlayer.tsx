@@ -26,7 +26,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, filename }) => {
             onClick={togglePlay}
             className="action-button secondary"
             style={{ padding: '8px 14px', fontSize: '0.85rem' }}
-            title={isPlaying ? 'Pause' : 'Play'}
+            title={isPlaying ? '暂停' : '播放'}
         >
             {isPlaying ? '\u23F8' : '\u25B6'}
             <audio ref={audioRef} src={audioUrl} onEnded={handleEnded} />

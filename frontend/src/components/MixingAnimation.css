@@ -1,0 +1,26 @@
+.running-progress { width: 100%; max-width: 500px; }
+.rp-scene {
+  position: relative; height: 52px; background: var(--bg-input);
+  border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden;
+}
+.rp-trail {
+  position: absolute; bottom: 16px; left: 8%; right: 8%;
+  height: 3px; background: var(--border); border-radius: 2px;
+}
+.rp-trail-fill {
+  position: absolute; bottom: 16px; left: 8%;
+  height: 3px; background: var(--accent); border-radius: 2px;
+  transition: width 0.4s ease; max-width: 84%;
+}
+.rp-runner {
+  position: absolute; bottom: 20px;
+  color: var(--accent); transition: left 0.4s ease;
+  animation: rp-bob 0.35s ease-in-out infinite alternate;
+}
+@keyframes rp-bob { from { transform: translateY(0) translateX(-50%); } to { transform: translateY(-4px) translateX(-50%); } }
+.rp-info {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 10px; font-size: 0.85rem;
+}
+.rp-msg { color: var(--text-secondary); }
+.rp-pct { font-weight: 700; color: var(--accent); }

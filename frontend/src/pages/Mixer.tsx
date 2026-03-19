@@ -32,7 +32,6 @@ const Mixer: React.FC = () => {
     const [progress, setProgress] = useState<number>(0);
     const [progressMessage, setProgressMessage] = useState<string>('');
 
-    // Fetch server info on mount
     useEffect(() => {
         const fetchServerInfo = async () => {
             try {
@@ -46,7 +45,6 @@ const Mixer: React.FC = () => {
         fetchServerInfo();
     }, []);
 
-    // Fetch formats when music files change
     useEffect(() => {
         if (musicFiles.length > 0) {
             const fileExt = musicFiles[0].name.split('.').pop()?.toLowerCase() || 'mp3';
@@ -54,7 +52,6 @@ const Mixer: React.FC = () => {
         }
     }, [musicFiles]);
 
-    // Polling for progress
     useEffect(() => {
         if (!taskId || !loading) return;
 
@@ -141,7 +138,7 @@ const Mixer: React.FC = () => {
         setOutputFiles([]);
         setProgress(0);
         setProgressMessage('初始化中...');
-        setCurrentStep(2); // Move to processing step
+        setCurrentStep(2);
 
         try {
             const formData = new FormData();
@@ -243,7 +240,7 @@ const Mixer: React.FC = () => {
 
                         <div className="wizard-actions">
                             <button className="action-button primary" onClick={handleNext}>
-                                下一步: 配置设置 →
+                                下一步: 配置设置
                             </button>
                         </div>
                     </div>
@@ -315,7 +312,7 @@ const Mixer: React.FC = () => {
 
                         <div className="wizard-actions">
                             <button className="action-button secondary" onClick={handleBack}>
-                                ← 返回
+                                返回
                             </button>
                             <button className="action-button primary" onClick={handleSubmit}>
                                 开始处理

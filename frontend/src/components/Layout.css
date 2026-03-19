@@ -9,7 +9,7 @@
   color: var(--text-on-dark);
   display: flex;
   flex-direction: column;
-  padding: 24px 0;
+  padding: 20px 0;
   position: fixed;
   top: 0;
   bottom: 0;
@@ -18,45 +18,49 @@
 }
 
 .logo-container {
-  padding: 0 24px 32px;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
+  padding: 0 20px 24px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
 }
 
 .logo-container h1 {
-  font-size: 1.35rem;
+  font-size: 1.25rem;
   font-weight: 800;
-  letter-spacing: -0.02em;
-  color: #FFFFFF;
+  letter-spacing: -0.01em;
+  color: #fff;
 }
 
 .logo-container h1 span {
   color: var(--accent);
 }
 
+.logo-container .logo-sub {
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.35);
+  margin-top: 2px;
+}
+
 .nav-menu {
   display: flex;
   flex-direction: column;
-  padding: 16px 12px;
+  padding: 14px 10px;
   gap: 2px;
   flex: 1;
 }
 
 .nav-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 16px;
+  display: block;
+  padding: 10px 14px;
   border-radius: var(--radius-sm);
-  color: rgba(255,255,255,0.6);
+  color: rgba(255,255,255,0.55);
   text-decoration: none;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   font-weight: 500;
   transition: background 0.15s, color 0.15s;
 }
 
 .nav-item:hover {
   background: var(--bg-sidebar-hover);
-  color: rgba(255,255,255,0.9);
+  color: rgba(255,255,255,0.85);
 }
 
 .nav-item.active {
@@ -64,15 +68,16 @@
   color: var(--accent);
   font-weight: 600;
   border-left: 3px solid var(--accent);
+  padding-left: 11px;
 }
 
 .content-area {
   flex: 1;
   margin-left: var(--sidebar-width);
-  padding: 32px 40px;
+  padding: 28px 36px;
   min-height: 100vh;
 }
 
 .page-content {
-  max-width: 1100px;
+  max-width: 1060px;
 }

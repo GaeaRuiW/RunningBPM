@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile
     container_name: runningbpm-backend
     ports:
-      - "8000:8000"
+      - "8001:8000"
     volumes:
       - ./backend/uploads:/app/uploads
       - ./backend/outputs:/app/outputs

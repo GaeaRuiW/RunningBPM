@@ -1,28 +1,29 @@
 .dashboard {
-  padding: 8px 0;
+  padding: 4px 0;
 }
 
-.dashboard-header {
-  margin-bottom: 40px;
+.dashboard-hero {
+  margin-bottom: 32px;
 }
 
-.dashboard-header h1 {
-  font-size: 2rem;
+.dashboard-hero h1 {
+  font-size: 1.75rem;
   font-weight: 800;
-  letter-spacing: -0.02em;
   color: var(--text-primary);
-  margin-bottom: 8px;
+  margin-bottom: 6px;
+  letter-spacing: -0.01em;
 }
 
-.dashboard-header p {
+.dashboard-hero p {
   color: var(--text-secondary);
-  font-size: 1rem;
+  font-size: 0.95rem;
+  margin-bottom: 20px;
 }
 
 .tools-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
 }
 
 .tool-card {
@@ -30,7 +31,7 @@
   border: 1px solid var(--border);
   border-left: 4px solid var(--accent);
   border-radius: var(--radius-md);
-  padding: 28px 24px;
+  padding: 24px 20px;
   text-decoration: none;
   color: inherit;
   transition: transform 0.15s, box-shadow 0.15s;
@@ -38,27 +39,27 @@
 }
 
 .tool-card:hover {
-  transform: translateY(-3px);
+  transform: translateY(-2px);
   box-shadow: var(--shadow-md);
 }
 
 .tool-card h3 {
-  font-size: 1.15rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: var(--text-primary);
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .tool-card p {
   color: var(--text-secondary);
-  font-size: 0.9rem;
-  line-height: 1.5;
+  font-size: 0.85rem;
+  line-height: 1.55;
 }
 
 .tool-card .card-arrow {
   display: inline-block;
-  margin-top: 16px;
+  margin-top: 14px;
   color: var(--accent);
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   font-weight: 600;
 }

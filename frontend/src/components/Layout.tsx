@@ -9,19 +9,20 @@ const MainLayout: React.FC = () => {
             <nav className="sidebar">
                 <div className="logo-container">
                     <h1>Running<span>BPM</span></h1>
+                    <div className="logo-sub">跑步音乐制作工具</div>
                 </div>
                 <div className="nav-menu">
                     <NavLink to="/" end className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-                        Dashboard
+                        首页
                     </NavLink>
                     <NavLink to="/mixer" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-                        Mixer
+                        音频合成
                     </NavLink>
                     <NavLink to="/stitcher" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-                        Stitcher
+                        音乐拼接
                     </NavLink>
                     <NavLink to="/extractor" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-                        Extractor
+                        节拍器提取
                     </NavLink>
                 </div>
             </nav>
@@ -30,10 +31,10 @@ const MainLayout: React.FC = () => {
                     <AnimatePresence mode="wait">
                         <motion.div
                             key={window.location.pathname}
-                            initial={{ opacity: 0, y: 8 }}
+                            initial={{ opacity: 0, y: 6 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0 }}
-                            transition={{ duration: 0.2 }}
+                            transition={{ duration: 0.18 }}
                         >
                             <Outlet />
                         </motion.div>

@@ -1,0 +1,131 @@
+/* ========================================
+   跑步场景动画 — 麦田小路
+   ======================================== */
+
+.running-scene {
+  position: relative;
+  width: 100%;
+  height: 210px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: linear-gradient(180deg, #7DD3FC 0%, #BAE6FD 35%, #D9F99D 68%, #86EFAC 100%);
+  user-select: none;
+}
+.running-scene.compact { height: 130px; }
+
+@media (prefers-color-scheme: dark) {
+  .running-scene {
+    background: linear-gradient(180deg, #0C2D48 0%, #163B5C 35%, #1A4731 68%, #14532D 100%);
+  }
+}
+
+/* 太阳 */
+.scene-sun {
+  position: absolute;
+  top: 18px; right: 14%;
+  width: 38px; height: 38px;
+  background: #FCD34D;
+  border-radius: 50%;
+  box-shadow: 0 0 28px 8px rgba(252,211,77,0.45), 0 0 60px 20px rgba(252,211,77,0.18);
+  animation: sun-glow 4s ease-in-out infinite alternate;
+}
+@keyframes sun-glow {
+  from { transform: scale(1); box-shadow: 0 0 28px 8px rgba(252,211,77,0.45), 0 0 60px 20px rgba(252,211,77,0.18); }
+  to   { transform: scale(1.08); box-shadow: 0 0 36px 12px rgba(252,211,77,0.55), 0 0 80px 28px rgba(252,211,77,0.22); }
+}
+@media (prefers-color-scheme: dark) {
+  .scene-sun { background: #FDE68A; box-shadow: 0 0 20px 6px rgba(253,230,138,0.3); }
+}
+
+/* 云 */
+.scene-cloud {
+  position: absolute;
+  background: rgba(255,255,255,0.92);
+  border-radius: 30px;
+  height: 16px;
+}
+.scene-cloud::before, .scene-cloud::after {
+  content: ''; position: absolute; background: inherit; border-radius: 50%;
+}
+.cloud-1 { width: 56px; top: 22px; animation: drift 28s linear infinite; }
+.cloud-1::before { width: 28px; height: 24px; top: -14px; left: 12px; }
+.cloud-1::after  { width: 18px; height: 16px; top: -8px; left: 32px; }
+.cloud-2 { width: 42px; top: 42px; animation: drift 34s linear infinite; animation-delay: -12s; }
+.cloud-2::before { width: 20px; height: 18px; top: -10px; left: 8px; }
+.cloud-3 { width: 48px; top: 14px; opacity: 0.65; animation: drift 22s linear infinite; animation-delay: -6s; }
+.cloud-3::before { width: 24px; height: 20px; top: -12px; left: 14px; }
+@keyframes drift { from { left: -80px; } to { left: calc(100% + 80px); } }
+@media (prefers-color-scheme: dark) { .scene-cloud { background: rgba(255,255,255,0.12); } }
+
+/* 山丘 */
+.hill {
+  position: absolute;
+  border-radius: 50% 50% 0 0;
+  bottom: 0;
+}
+.hill-far  { width: 130%; height: 100px; left: -15%; background: #86EFAC; bottom: 30px; z-index: 1; }
+.hill-mid  { width: 90%;  height: 80px;  left: 15%;  background: #4ADE80; bottom: 20px; z-index: 2; }
+.hill-near { width: 110%; height: 65px;  left: -5%;  background: #22C55E; bottom: 0;    z-index: 3; }
+@media (prefers-color-scheme: dark) {
+  .hill-far  { background: #166534; }
+  .hill-mid  { background: #15803D; }
+  .hill-near { background: #16A34A; }
+}
+
+/* 小路 */
+.scene-path {
+  position: absolute;
+  bottom: 22px; left: 0; right: 0;
+  height: 5px; z-index: 4;
+  background: linear-gradient(90deg, transparent 0%, #C9956B 15%, #B07D4F 50%, #C9956B 85%, transparent 100%);
+  border-radius: 3px;
+  opacity: 0.75;
+}
+
+/* 麦穗 */
+.wheat-row {
+  position: absolute;
+  bottom: 26px; left: 5%; right: 5%;
+  display: flex; justify-content: space-between;
+  z-index: 5;
+  pointer-events: none;
+}
+.wheat {
+  width: 3px; height: 20px;
+  background: linear-gradient(to top, #22C55E 0%, #86EFAC 100%);
+  border-radius: 2px 2px 0 0;
+  transform-origin: bottom center;
+  animation: sway 2.5s ease-in-out infinite alternate;
+  position: relative;
+}
+.wheat::before {
+  content: ''; position: absolute;
+  top: -5px; left: -3px;
+  width: 9px; height: 7px;
+  background: #D97706; border-radius: 50% 50% 30% 30%;
+}
+.w0 { animation-delay: 0s; }
+.w1 { animation-delay: -0.5s; height: 17px; }
+.w2 { animation-delay: -1.0s; height: 22px; }
+.w3 { animation-delay: -1.5s; height: 19px; }
+@keyframes sway { from { transform: rotate(-6deg); } to { transform: rotate(6deg); } }
+@media (prefers-color-scheme: dark) {
+  .wheat { background: linear-gradient(to top, #16A34A, #4ADE80); }
+  .wheat::before { background: #B45309; }
+}
+
+/* 跑者 */
+.runner-wrap {
+  position: absolute;
+  bottom: 28px; z-index: 6;
+  color: #374151;
+  animation: runner-run 10s linear infinite;
+}
+.runner-svg {
+  width: 26px; height: 36px;
+  animation: runner-bob 0.35s ease-in-out infinite alternate;
+  filter: drop-shadow(1px 2px 2px rgba(0,0,0,0.15));
+}
+@keyframes runner-run { 0% { left: -40px; } 100% { left: calc(100% + 40px); } }
+@keyframes runner-bob { from { transform: translateY(0); } to { transform: translateY(-5px); } }
+@media (prefers-color-scheme: dark) { .runner-wrap { color: #E2E8F0; } }

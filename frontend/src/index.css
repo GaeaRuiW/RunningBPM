@@ -1,92 +1,82 @@
 /* ========================================
-   RunningBPM Design System
-   Bold & Sporty Theme with Auto Light/Dark
+   RunningBPM 设计系统
+   春日跑道 · 自动亮色/暗色
    ======================================== */
 
 :root {
-  /* Brand Accent */
-  --accent: #F97316;
-  --accent-hover: #EA580C;
-  --accent-light: #FFF7ED;
-  --accent-subtle: rgba(249, 115, 22, 0.08);
+  /* 品牌色 — 翡翠绿 */
+  --accent: #059669;
+  --accent-hover: #047857;
+  --accent-light: #D1FAE5;
+  --accent-subtle: rgba(5, 150, 105, 0.08);
+  --accent-warm: #D97706;
+  --accent-warm-light: #FEF3C7;
 
-  /* Light Mode (default) */
-  --bg-page: #F5F5F7;
+  /* 亮色模式 */
+  --bg-page: #F7FAF8;
   --bg-surface: #FFFFFF;
   --bg-elevated: #FFFFFF;
-  --bg-input: #F3F4F6;
-  --bg-sidebar: #111827;
-  --bg-sidebar-hover: #1F2937;
-  --bg-sidebar-active: rgba(249, 115, 22, 0.12);
+  --bg-input: #F1F5F3;
+  --bg-sidebar: #0F172A;
+  --bg-sidebar-hover: #1E293B;
+  --bg-sidebar-active: rgba(5, 150, 105, 0.14);
 
   --text-primary: #111827;
-  --text-secondary: #6B7280;
+  --text-secondary: #4B5563;
   --text-tertiary: #9CA3AF;
-  --text-on-dark: #F9FAFB;
+  --text-on-dark: #F1F5F9;
   --text-on-accent: #FFFFFF;
 
-  --border: #E5E7EB;
-  --border-strong: #D1D5DB;
+  --border: #D5DDD8;
+  --border-strong: #B0BFB5;
 
   --success: #10B981;
   --error: #EF4444;
   --warning: #F59E0B;
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.08);
 
-  /* Sizing */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --sidebar-width: 240px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --sidebar-width: 220px;
 
-  /* Typography */
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
 
   color-scheme: light dark;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg-page: #0C0C18;
-    --bg-surface: #161625;
-    --bg-elevated: #1E1E32;
-    --bg-input: #1E1E32;
-    --bg-sidebar: #0A0A14;
-    --bg-sidebar-hover: #141424;
-    --bg-sidebar-active: rgba(249, 115, 22, 0.15);
+    --bg-page: #0B1121;
+    --bg-surface: #141E30;
+    --bg-elevated: #1B2840;
+    --bg-input: #1B2840;
+    --bg-sidebar: #080E1A;
+    --bg-sidebar-hover: #111B2E;
+    --bg-sidebar-active: rgba(5, 150, 105, 0.18);
 
-    --text-primary: #F9FAFB;
-    --text-secondary: #9CA3AF;
-    --text-tertiary: #6B7280;
+    --text-primary: #F1F5F9;
+    --text-secondary: #94A3B8;
+    --text-tertiary: #64748B;
 
-    --border: #2A2A40;
-    --border-strong: #3A3A55;
+    --border: #1E2D42;
+    --border-strong: #2A3F5A;
 
-    --accent-light: rgba(249, 115, 22, 0.15);
+    --accent-light: rgba(5, 150, 105, 0.18);
+    --accent-warm-light: rgba(217, 119, 6, 0.15);
 
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.5);
   }
 }
 
-/* Global Resets */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-html {
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
+/* 全局重置 */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
 body {
   font-family: var(--font-sans);
   background: var(--bg-page);
@@ -95,26 +85,8 @@ body {
   min-height: 100vh;
 }
 
-/* Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--text-tertiary);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--text-secondary);
-}
-
-/* Selection */
-::selection {
-  background: var(--accent);
-  color: var(--text-on-accent);
-}
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--text-tertiary); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
+::selection { background: var(--accent); color: var(--text-on-accent); }

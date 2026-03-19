@@ -52,7 +52,7 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({
         >
             <div className="upload-icon">+</div>
             <span className="upload-label">{label}</span>
-            <span className="upload-hint">Supports MP3, WAV, FLAC, M4A, OGG</span>
+            <span className="upload-hint">支持 MP3、WAV、FLAC、M4A、OGG 格式</span>
             <input
                 ref={inputRef}
                 id={id}
